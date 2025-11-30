@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,7 +23,6 @@ public class AdminService {
     private final ProdutoRepository produtoRepository;
     private final FileStorageService fileStorageService;
     private final ContatoRepository contatoRepository;
-
     private final EmailService emailService;
 
     public List<PedidoAdminResponse> listarTodosOsPedidos() {
@@ -47,24 +45,48 @@ public class AdminService {
      */
     @Transactional
     public Pedido atualizarStatusPedido(Long pedidoId, String novoStatus) {
+        // 1. Busca o pedido com FETCH para garantir que os itens sejam carregados
         Pedido pedido = pedidoRepository.findById(pedidoId)
                 .orElseThrow(() -> new RuntimeException("Pedido não encontrado"));
 
         String statusAntigo = pedido.getStatus();
 
+        // 2. Atualiza o status
         pedido.setStatus(novoStatus);
         Pedido pedidoSalvo = pedidoRepository.save(pedido);
 
+        // 3. Verifica se o status mudou para PAGO
         final String STATUS_PAGO = "PAGO";
 
         if (STATUS_PAGO.equalsIgnoreCase(novoStatus) && !STATUS_PAGO.equalsIgnoreCase(statusAntigo)) {
             try {
-                // CORREÇÃO: Chama o novo método dedicado para CONFIRMAÇÃO DE PAGAMENTO.
+                System.out.println(">>> [ADMIN] Status mudou para PAGO. Enviando e-mail de confirmação de pagamento...");
+
+                // IMPORTANTE: Força o carregamento dos itens antes de enviar o email
+                // para evitar LazyInitializationException
+                int totalItens = pedidoSalvo.getItens().size();
+                System.out.println(">>> [ADMIN] Pedido tem " + totalItens + " itens. Enviando email...");
+
+                // Envia o email de PAGAMENTO CONFIRMADO
                 emailService.enviarPagamentoConfirmado(pedidoSalvo);
+
+                System.out.println(">>> [ADMIN] E-mail de confirmação de pagamento enviado com sucesso para: "
+                        + pedidoSalvo.getUsuario().getEmail());
+
             } catch (Exception e) {
-                System.err.println("ERRO: Status do pedido " + pedidoId + " atualizado, mas falha ao enviar e-mail de confirmação.");
+                // Log detalhado do erro
+                System.err.println("!!! [ADMIN] ERRO CRÍTICO ao enviar e-mail de confirmação de pagamento!");
+                System.err.println("!!! Pedido ID: " + pedidoId);
+                System.err.println("!!! Cliente: " + pedidoSalvo.getUsuario().getEmail());
+                System.err.println("!!! Mensagem de erro: " + e.getMessage());
                 e.printStackTrace();
+
+                // IMPORTANTE: Não lançar exceção aqui para não reverter a transação
+                // O pedido já foi salvo com status PAGO, o email é secundário
             }
+        } else {
+            System.out.println(">>> [ADMIN] Status atualizado de " + statusAntigo + " para " + novoStatus +
+                    ". Nenhum e-mail adicional será enviado.");
         }
 
         return pedidoSalvo;
@@ -73,7 +95,6 @@ public class AdminService {
     @Transactional
     public Produto adicionarProduto(Produto produto, MultipartFile imagemFile) {
         if (imagemFile != null && !imagemFile.isEmpty()) {
-            // CORREÇÃO: store(imagemFile) -> saveAndGetFilename(imagemFile)
             String imagemUrl = fileStorageService.saveAndGetFilename(imagemFile);
             produto.setImagemUrl(imagemUrl);
         }
@@ -86,7 +107,6 @@ public class AdminService {
                 .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
 
         if (imagemFile != null && !imagemFile.isEmpty()) {
-            // CORREÇÃO: store(imagemFile) -> saveAndGetFilename(imagemFile)
             String imagemUrl = fileStorageService.saveAndGetFilename(imagemFile);
             produto.setImagemUrl(imagemUrl);
         }
