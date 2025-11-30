@@ -114,7 +114,8 @@ public class PedidoService {
             throw new RuntimeException("Falha crítica ao gerar o código PIX para o pedido. Pedido ID: " + pedidoSalvo.getId());
         }
 
-        emailService.enviarConfirmacaoDePedido(pedidoSalvo);
+        // CORREÇÃO APLICADA AQUI: Chama o novo método para Pedido Recebido (Aguardando Pagamento)
+        emailService.enviarPedidoRecebido(pedidoSalvo);
 
         return pedidoSalvo;
     }

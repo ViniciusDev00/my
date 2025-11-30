@@ -8,7 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-import org.springframework.scheduling.annotation.Async; // NOVO: Importação para a correção de performance
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.transaction.annotation.Transactional; // NOVO IMPORT
 
 import java.io.UnsupportedEncodingException;
 import java.time.format.DateTimeFormatter;
@@ -30,71 +31,43 @@ public class EmailService {
     private final String COLOR_TEXT_LIGHT = "#718096";
     private final String COLOR_BORDER = "#e2e8f0";
     private final String COLOR_SUCCESS = "#48bb78";
-    private final String COLOR_WARNING = "#ed8936";
+    private final String COLOR_WARNING = "#ed8936"; // Cor para Aguardando Pagamento/Atenção
     private final String COLOR_ERROR = "#f56565";
 
+    // MANTIDO: Método de conveniência que dispara a CONFIRMAÇÃO DE PEDIDO (Status: Processando)
     public void enviarConfirmacaoPagamento(Pedido pedido) {
-        // Este método não precisa ser Async, ele apenas chama o próximo.
-        enviarConfirmacaoDePedido(pedido);
+        // Dispara o email de PEDIDO RECEBIDO, pois o pagamento ainda está sendo processado.
+        enviarPedidoRecebido(pedido);
     }
 
-    @Async // CORREÇÃO: Envia o e-mail em uma thread separada para evitar a demora de 20 segundos.
-    public void enviarConfirmacaoDePedido(Pedido pedido) {
+    // MÉTODO 1: PEDIDO RECEBIDO (STATUS: PROCESSANDO / AGUARDANDO PAGAMENTO)
+    /**
+     * Envia o email de confirmação de que o pedido foi criado, mas o pagamento ainda está pendente.
+     * Deve ser chamado imediatamente após o checkout.
+     */
+    @Async
+    @Transactional // CORREÇÃO 1: Garante que o acesso aos detalhes do pedido funcione.
+    public void enviarPedidoRecebido(Pedido pedido) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            // Formatação de Valores
             String totalFormatado = String.format("%.2f", pedido.getValorTotal());
             String dataPedido = pedido.getDataPedido().format(DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm"));
 
-            // Constrói a lista de itens em HTML profissional
-            StringBuilder itensHtml = new StringBuilder();
-            itensHtml.append("<table width='100%' cellpadding='12' cellspacing='0' style='border-collapse: separate; border-spacing: 0; margin: 20px 0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);'>");
-            itensHtml.append("<thead>")
-                    .append("<tr style='background: linear-gradient(135deg, ").append(COLOR_PRIMARY).append(", ").append(COLOR_PRIMARY_LIGHT).append("); color: white;'>")
-                    .append("<th align='left' style='padding: 12px; font-weight: 600;'>Produto</th>")
-                    .append("<th align='center' style='padding: 12px; font-weight: 600;'>Qtd</th>")
-                    .append("<th align='right' style='padding: 12px; font-weight: 600;'>Valor</th>")
-                    .append("</tr>")
-                    .append("</thead>")
-                    .append("<tbody>");
+            // Constrói HTML do corpo do email (funções auxiliares)
+            String itensHtml = buildItensHtml(pedido);
+            String enderecoHtml = buildEnderecoHtml(pedido);
 
-            for (ItemPedido item : pedido.getItens()) {
-                String precoItem = String.format("%.2f", item.getPrecoUnitario());
-                // CORREÇÃO: Usar multiply() para BigDecimal
-                BigDecimal totalItemValue = item.getPrecoUnitario().multiply(BigDecimal.valueOf(item.getQuantidade()));
-                String totalItem = String.format("%.2f", totalItemValue);
-
-                itensHtml.append("<tr style='background-color: white; border-bottom: 1px solid ").append(COLOR_BORDER).append(";'>")
-                        .append("<td style='padding: 12px; color: ").append(COLOR_TEXT).append(";'>")
-                        .append("<div style='font-weight: 600; margin-bottom: 4px;'>").append(item.getProduto().getNome()).append("</div>")
-                        .append("<div style='font-size: 13px; color: ").append(COLOR_TEXT_LIGHT).append(";'>Tamanho: ").append(item.getTamanho()).append("</div>")
-                        .append("</td>")
-                        .append("<td align='center' style='padding: 12px; color: ").append(COLOR_TEXT).append("; font-weight: 500;'>").append(item.getQuantidade()).append("</td>")
-                        .append("<td align='right' style='padding: 12px; color: ").append(COLOR_TEXT).append(";'>")
-                        .append("<div style='font-weight: 600;'>R$ ").append(totalItem).append("</div>")
-                        .append("<div style='font-size: 12px; color: ").append(COLOR_TEXT_LIGHT).append(";'>R$ ").append(precoItem).append(" un</div>")
-                        .append("</td>")
-                        .append("</tr>");
-            }
-
-            // Linha do total
-            itensHtml.append("<tr style='background-color: ").append(COLOR_BG).append(";'>")
-                    .append("<td colspan='2' align='right' style='padding: 12px; font-weight: 600; color: ").append(COLOR_TEXT).append(";'>Total:</td>")
-                    .append("<td align='right' style='padding: 12px; font-weight: 700; font-size: 16px; color: ").append(COLOR_PRIMARY).append(";'>R$ ").append(totalFormatado).append("</td>")
-                    .append("</tr>");
-
-            itensHtml.append("</tbody></table>");
-
-            // Monta o corpo do e-mail profissional
             String bodyContent =
                     "<div style='text-align: center; margin-bottom: 30px;'>" +
-                            "<div style='background: linear-gradient(135deg, " + COLOR_PRIMARY + ", " + COLOR_PRIMARY_LIGHT + "); width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 15px;'>" +
-                            "<span style='color: white; font-size: 24px;'>✓</span>" +
+                            // Ícone: Recebido/Processando (Relógio)
+                            "<div style='background-color: " + COLOR_WARNING + "; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 15px;'>" +
+                            "<span style='color: white; font-size: 24px;'>🕒</span>" + // Ícone de relógio/tempo
                             "</div>" +
-                            "<h1 style='color: " + COLOR_TEXT + "; margin: 0 0 10px 0; font-size: 28px;'>Pedido Confirmado!</h1>" +
+                            "<h1 style='color: " + COLOR_TEXT + "; margin: 0 0 10px 0; font-size: 28px;'>Pedido Recebido!</h1>" +
                             "<p style='color: " + COLOR_TEXT_LIGHT + "; margin: 0; font-size: 16px;'>Obrigado pela sua compra, " + pedido.getUsuario().getNome() + "!</p>" +
+                            "<p style='color: " + COLOR_TEXT_LIGHT + "; margin-top: 10px; font-size: 15px;'>Seu pedido foi registrado e estamos aguardando a confirmação do seu pagamento (PIX).</p>" +
                             "</div>" +
 
                             "<div style='background: linear-gradient(135deg, " + COLOR_PRIMARY + ", " + COLOR_PRIMARY_LIGHT + "); padding: 20px; border-radius: 12px; margin: 25px 0; text-align: center; color: white;'>" +
@@ -108,41 +81,32 @@ public class EmailService {
                             "<div style='font-weight: 600; color: " + COLOR_TEXT + ";'>" + dataPedido + "</div>" +
                             "</div>" +
                             "<div style='background-color: " + COLOR_BG + "; padding: 15px; border-radius: 8px; text-align: center;'>" +
-                            "<div style='font-size: 13px; color: " + COLOR_TEXT_LIGHT + "; margin-bottom: 5px;'>Status</div>" +
-                            "<div style='font-weight: 600; color: " + COLOR_SUCCESS + ";'>" + pedido.getStatus() + "</div>" +
+                            "<div style='font-size: 13px; color: " + COLOR_TEXT_LIGHT + "; margin-bottom: 5px;'>Status Atual</div>" +
+                            "<div style='font-weight: 600; color: " + COLOR_WARNING + ";'>Aguardando Pagamento</div>" +
                             "</div>" +
                             "</div>" +
 
-                            "<h3 style='color: " + COLOR_TEXT + "; margin: 30px 0 15px 0; font-size: 18px; border-bottom: 2px solid " + COLOR_BORDER + "; padding-bottom: 8px;'>Itens do Pedido</h3>" +
-                            itensHtml.toString() +
-
-                            "<h3 style='color: " + COLOR_TEXT + "; margin: 30px 0 15px 0; font-size: 18px; border-bottom: 2px solid " + COLOR_BORDER + "; padding-bottom: 8px;'>Endereço de Entrega</h3>" +
-                            "<div style='background-color: " + COLOR_BG + "; padding: 20px; border-radius: 8px; line-height: 1.6;'>" +
-                            "<div style='font-weight: 600; color: " + COLOR_TEXT + "; margin-bottom: 5px;'>" + pedido.getUsuario().getNome() + "</div>" +
-                            "<div style='color: " + COLOR_TEXT + ";'>" + pedido.getEnderecoDeEntrega().getRua() + ", " + pedido.getEnderecoDeEntrega().getNumero() + "</div>" +
-                            "<div style='color: " + COLOR_TEXT + ";'>" + pedido.getEnderecoDeEntrega().getCidade() + " - " + pedido.getEnderecoDeEntrega().getEstado() + "</div>" +
-                            "<div style='color: " + COLOR_TEXT_LIGHT + ";'>CEP: " + pedido.getEnderecoDeEntrega().getCep() + "</div>" +
-                            "</div>" +
+                            "<h3 style='color: " + COLOR_TEXT + "; margin: 30px 0 15px 0; font-size: 18px; border-bottom: 2px solid " + COLOR_BORDER + "; padding-bottom: 8px;'>Resumo do Pedido</h3>" +
+                            itensHtml +
+                            enderecoHtml +
 
                             "<div style='text-align: center; margin: 40px 0 20px;'>" +
-                            "<a href='http://localhost:5500/FRONT/perfil/HTML/pedidos.html' style='display: inline-block; background: linear-gradient(135deg, " + COLOR_PRIMARY + ", " + COLOR_PRIMARY_LIGHT + "); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(255, 122, 0, 0.3); transition: all 0.3s ease;'>Acompanhar Pedido</a>" +
+                            // Botão que leva à página de pagamento (inclui ID na URL)
+                            "<a href='http://localhost:5500/FRONT/pagamento/HTML/pagamento.html?id=" + pedido.getId() + "' style='display: inline-block; background: linear-gradient(135deg, " + COLOR_PRIMARY + ", " + COLOR_PRIMARY_LIGHT + "); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(255, 122, 0, 0.3); transition: all 0.3s ease;'>Acessar Página de Pagamento</a>" +
                             "</div>" +
 
-                            "<div style='text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid " + COLOR_BORDER + ";'>" +
-                            "<p style='color: " + COLOR_TEXT_LIGHT + "; font-size: 14px; margin: 5px 0;'>Precisa de ajuda? <a href='mailto:suporte@japauniverse.com.br' style='color: " + COLOR_PRIMARY + "; text-decoration: none;'>Entre em contato conosco</a></p>" +
-                            "</div>";
+                            buildSuporteFooter();
 
-            String finalHtml = getBaseTemplate(bodyContent, "Confirmação de Pedido #" + pedido.getId());
+
+            String finalHtml = getBaseTemplate(bodyContent, "Pedido Recebido #" + pedido.getId());
 
             helper.setTo(pedido.getUsuario().getEmail());
-            helper.setSubject("✅ Pedido Confirmado - Japa Universe #" + pedido.getId());
+            helper.setSubject("⏳ Pedido Recebido - Aguardando Pagamento Japa Universe #" + pedido.getId());
             helper.setText(finalHtml, true);
 
-            // CORREÇÃO: Tratar UnsupportedEncodingException
             try {
                 helper.setFrom("nao-responda@japauniverse.com.br", "Japa Universe");
             } catch (UnsupportedEncodingException e) {
-                // Fallback: usar setFrom sem personalização se houver erro de encoding
                 helper.setFrom("nao-responda@japauniverse.com.br");
             }
 
@@ -150,11 +114,158 @@ public class EmailService {
 
         } catch (MessagingException e) {
             e.printStackTrace();
-            throw new RuntimeException("Falha ao enviar e-mail de confirmação", e);
+            throw new RuntimeException("Falha ao enviar e-mail de confirmação de pedido", e);
         }
     }
 
-    @Async // CORREÇÃO: Envia o e-mail em uma thread separada para evitar a demora de 20 segundos.
+    // MÉTODO 2: PAGAMENTO CONFIRMADO (STATUS: PAGO)
+    /**
+     * Envia o email de confirmação de que o pagamento foi identificado e o pedido segue para preparação.
+     * DEVE SER CHAMADO PELO ADMINSERVICE/CONTROLLER ao mudar o status para "PAGO".
+     */
+    @Async
+    @Transactional // CORREÇÃO 2: Garante que o acesso aos detalhes do pedido funcione.
+    public void enviarPagamentoConfirmado(Pedido pedido) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            String totalFormatado = String.format("%.2f", pedido.getValorTotal());
+            String dataPedido = pedido.getDataPedido().format(DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm"));
+
+            // Constrói HTML do corpo do email (funções auxiliares)
+            String itensHtml = buildItensHtml(pedido);
+            String enderecoHtml = buildEnderecoHtml(pedido);
+
+            // Monta o corpo do e-mail com status SUCESSO
+            String bodyContent =
+                    "<div style='text-align: center; margin-bottom: 30px;'>" +
+                            // Ícone: Confirmação de Sucesso (Checkmark)
+                            "<div style='background-color: " + COLOR_SUCCESS + "; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 15px;'>" +
+                            "<span style='color: white; font-size: 24px;'>✓</span>" +
+                            "</div>" +
+                            "<h1 style='color: " + COLOR_TEXT + "; margin: 0 0 10px 0; font-size: 28px;'>Pagamento Confirmado!</h1>" +
+                            "<p style='color: " + COLOR_TEXT_LIGHT + "; margin: 0; font-size: 16px;'>Recebemos a confirmação do seu pagamento, " + pedido.getUsuario().getNome() + "!</p>" +
+                            "<p style='color: " + COLOR_TEXT_LIGHT + "; margin-top: 10px; font-size: 15px;'>Seu pedido agora está sendo processado para envio.</p>" +
+                            "</div>" +
+
+                            "<div style='background: linear-gradient(135deg, " + COLOR_PRIMARY + ", " + COLOR_PRIMARY_LIGHT + "); padding: 20px; border-radius: 12px; margin: 25px 0; text-align: center; color: white;'>" +
+                            "<div style='font-size: 13px; opacity: 0.9; margin-bottom: 5px;'>NÚMERO DO PEDIDO</div>" +
+                            "<div style='font-size: 24px; font-weight: 700; letter-spacing: 1px;'>#" + pedido.getId() + "</div>" +
+                            "</div>" +
+
+                            "<div style='display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 25px 0;'>" +
+                            "<div style='background-color: " + COLOR_BG + "; padding: 15px; border-radius: 8px; text-align: center;'>" +
+                            "<div style='font-size: 13px; color: " + COLOR_TEXT_LIGHT + "; margin-bottom: 5px;'>Data do Pedido</div>" +
+                            "<div style='font-weight: 600; color: " + COLOR_TEXT + ";'>" + dataPedido + "</div>" +
+                            "</div>" +
+                            "<div style='background-color: " + COLOR_BG + "; padding: 15px; border-radius: 8px; text-align: center;'>" +
+                            "<div style='font-size: 13px; color: " + COLOR_TEXT_LIGHT + "; margin-bottom: 5px;'>Status Atual</div>" +
+                            "<div style='font-weight: 600; color: " + COLOR_SUCCESS + ";'>Pagamento Confirmado!</div>" +
+                            "</div>" +
+                            "</div>" +
+
+                            "<h3 style='color: " + COLOR_TEXT + "; margin: 30px 0 15px 0; font-size: 18px; border-bottom: 2px solid " + COLOR_BORDER + "; padding-bottom: 8px;'>Itens Pagos</h3>" +
+                            itensHtml +
+                            enderecoHtml +
+
+                            "<div style='text-align: center; margin: 40px 0 20px;'>" +
+                            "<a href='http://localhost:5500/FRONT/perfil/HTML/pedidos.html' style='display: inline-block; background: linear-gradient(135deg, " + COLOR_PRIMARY + ", " + COLOR_PRIMARY_LIGHT + "); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(255, 122, 0, 0.3); transition: all 0.3s ease;'>Acompanhar Pedido (Em Preparação)</a>" +
+                            "</div>" +
+
+                            // NOVO REQUISITO: Mensagem de agradecimento e avisos na aba
+                            "<div style='text-align: center; margin-top: 30px; padding: 20px; border: 1px solid " + COLOR_BORDER + "; border-radius: 8px; background-color: #f0f8ff;'>" +
+                            "<p style='color: " + COLOR_TEXT + "; font-size: 15px; margin: 0; font-weight: 500;'>" +
+                            "Receberá atualizações sobre o seu pedido tanto por e-mail quanto na aba <span style='font-weight: 700; color: " + COLOR_PRIMARY + ";'>'Avisos'</span> dentro da sua página de pedidos na loja. Obrigado por comprar na Japa Universe!" +
+                            "</p>" +
+                            "</div>" +
+                            // FIM NOVO REQUISITO
+
+                            buildSuporteFooter();
+
+
+            String finalHtml = getBaseTemplate(bodyContent, "Pagamento Confirmado #" + pedido.getId());
+
+            helper.setTo(pedido.getUsuario().getEmail());
+            helper.setSubject("✅ Pagamento Confirmado - Japa Universe #" + pedido.getId());
+            helper.setText(finalHtml, true);
+
+            try {
+                helper.setFrom("nao-responda@japauniverse.com.br", "Japa Universe");
+            } catch (UnsupportedEncodingException e) {
+                helper.setFrom("nao-responda@japauniverse.com.br");
+            }
+
+            mailSender.send(message);
+
+        } catch (MessagingException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Falha ao enviar e-mail de confirmação de pagamento", e);
+        }
+    }
+
+
+    // --- MÉTODOS AUXILIARES: HTML (Reutilizando a lógica) ---
+
+    private String buildItensHtml(Pedido pedido) {
+        StringBuilder itensHtml = new StringBuilder();
+        itensHtml.append("<table width='100%' cellpadding='12' cellspacing='0' style='border-collapse: separate; border-spacing: 0; margin: 20px 0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);'>");
+        itensHtml.append("<thead>")
+                .append("<tr style='background: linear-gradient(135deg, ").append(COLOR_PRIMARY).append(", ").append(COLOR_PRIMARY_LIGHT).append("); color: white;'>")
+                .append("<th align='left' style='padding: 12px; font-weight: 600;'>Produto</th>")
+                .append("<th align='center' style='padding: 12px; font-weight: 600;'>Qtd</th>")
+                .append("<th align='right' style='padding: 12px; font-weight: 600;'>Valor</th>")
+                .append("</tr>")
+                .append("</thead>")
+                .append("<tbody>");
+
+        for (ItemPedido item : pedido.getItens()) {
+            String precoItem = String.format("%.2f", item.getPrecoUnitario());
+            // Usar multiply() para BigDecimal
+            BigDecimal totalItemValue = item.getPrecoUnitario().multiply(BigDecimal.valueOf(item.getQuantidade()));
+            String totalItem = String.format("%.2f", totalItemValue);
+
+            itensHtml.append("<tr style='background-color: white; border-bottom: 1px solid ").append(COLOR_BORDER).append(";'>")
+                    .append("<td style='padding: 12px; color: ").append(COLOR_TEXT).append(";'>")
+                    .append("<div style='font-weight: 600; margin-bottom: 4px;'>").append(item.getProduto().getNome()).append("</div>")
+                    .append("<div style='font-size: 13px; color: ").append(COLOR_TEXT_LIGHT).append(";'>Tamanho: ").append(item.getTamanho()).append("</div>")
+                    .append("</td>")
+                    .append("<td align='center' style='padding: 12px; color: ").append(COLOR_TEXT).append("; font-weight: 500;'>").append(item.getQuantidade()).append("</td>")
+                    .append("<td align='right' style='padding: 12px; color: ").append(COLOR_TEXT).append(";'>")
+                    .append("<div style='font-weight: 600;'>R$ ").append(totalItem).append("</div>")
+                    .append("<div style='font-size: 12px; color: ").append(COLOR_TEXT_LIGHT).append(";'>R$ ").append(precoItem).append(" un</div>")
+                    .append("</td>")
+                    .append("</tr>");
+        }
+
+        // Linha do total
+        itensHtml.append("<tr style='background-color: ").append(COLOR_BG).append(";'>")
+                .append("<td colspan='2' align='right' style='padding: 12px; font-weight: 600; color: ").append(COLOR_TEXT).append(";'>Total:</td>")
+                .append("<td align='right' style='padding: 12px; font-weight: 700; font-size: 16px; color: ").append(COLOR_PRIMARY).append(";'>R$ ").append(String.format("%.2f", pedido.getValorTotal())).append("</td>")
+                .append("</tr>");
+
+        itensHtml.append("</tbody></table>");
+        return itensHtml.toString();
+    }
+
+    private String buildEnderecoHtml(Pedido pedido) {
+        return "<h3 style='color: " + COLOR_TEXT + "; margin: 30px 0 15px 0; font-size: 18px; border-bottom: 2px solid " + COLOR_BORDER + "; padding-bottom: 8px;'>Endereço de Entrega</h3>" +
+                "<div style='background-color: " + COLOR_BG + "; padding: 20px; border-radius: 8px; line-height: 1.6;'>" +
+                "<div style='font-weight: 600; color: " + COLOR_TEXT + "; margin-bottom: 5px;'>" + pedido.getUsuario().getNome() + "</div>" +
+                "<div style='color: " + COLOR_TEXT + ";'>" + pedido.getEnderecoDeEntrega().getRua() + ", " + pedido.getEnderecoDeEntrega().getNumero() + "</div>" +
+                "<div style='color: " + COLOR_TEXT + ";'>" + pedido.getEnderecoDeEntrega().getCidade() + " - " + pedido.getEnderecoDeEntrega().getEstado() + "</div>" +
+                "<div style='color: " + COLOR_TEXT_LIGHT + ";'>CEP: " + pedido.getEnderecoDeEntrega().getCep() + "</div>" +
+                "</div>";
+    }
+
+    private String buildSuporteFooter() {
+        return "<div style='text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid " + COLOR_BORDER + ";'>" +
+                "<p style='color: " + COLOR_TEXT_LIGHT + "; font-size: 14px; margin: 5px 0;'>Precisa de ajuda? <a href='mailto:suporte@japauniverse.com.br' style='color: " + COLOR_PRIMARY + "; text-decoration: none;'>Entre em contato conosco</a></p>" +
+                "</div>";
+    }
+
+    // O método sendPasswordResetEmail original foi mantido e apenas copiado aqui.
+    @Async
     public void sendPasswordResetEmail(String to, String token) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -208,7 +319,8 @@ public class EmailService {
         }
     }
 
-    // --- TEMPLATE BASE PROFISSIONAL ---
+
+    // --- TEMPLATE BASE PROFISSIONAL (Mantido) ---
     private String getBaseTemplate(String content, String pageTitle) {
         return "<!DOCTYPE html>" +
                 "<html lang='pt-BR'>" +

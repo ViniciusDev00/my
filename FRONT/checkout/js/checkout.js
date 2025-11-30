@@ -187,7 +187,8 @@ document.addEventListener('DOMContentLoaded', () => {
             sessionStorage.setItem('ultimoPedidoValor', res.data.valorTotal);
             sessionStorage.setItem('ultimoPedidoPixCode', res.data.pixCopiaECola);
 
-            window.location.href = '../../pagamento/HTML/pagamento.html';
+            // CORREÇÃO: Adiciona o ID do pedido à URL
+            window.location.href = `../../pagamento/HTML/pagamento.html?id=${res.data.id}`;
 
         } catch (error) {
             console.error(error);
@@ -220,4 +221,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadAddresses();
     renderCart();
-}); 
+});

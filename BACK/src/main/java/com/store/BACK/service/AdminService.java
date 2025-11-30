@@ -59,8 +59,8 @@ public class AdminService {
 
         if (STATUS_PAGO.equalsIgnoreCase(novoStatus) && !STATUS_PAGO.equalsIgnoreCase(statusAntigo)) {
             try {
-                // CORREÇÃO: Chamada ajustada para o método que recebe apenas Pedido
-                emailService.enviarConfirmacaoPagamento(pedidoSalvo);
+                // CORREÇÃO: Chama o novo método dedicado para CONFIRMAÇÃO DE PAGAMENTO.
+                emailService.enviarPagamentoConfirmado(pedidoSalvo);
             } catch (Exception e) {
                 System.err.println("ERRO: Status do pedido " + pedidoId + " atualizado, mas falha ao enviar e-mail de confirmação.");
                 e.printStackTrace();
