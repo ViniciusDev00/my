@@ -51,6 +51,7 @@ public class AdminController {
      */
     @PatchMapping("/pedidos/{pedidoId}/status")
     public ResponseEntity<Pedido> updatePedidoStatus(
+<<<<<<< HEAD
             @PathVariable Long pedidoId,
             @RequestBody StatusUpdateDTO statusUpdate) {
 
@@ -61,6 +62,18 @@ public class AdminController {
                         statusUpdate.getCodigoRastreio(),
                         statusUpdate.getLinkRastreio()
                 )
+=======
+            @PathVariable Long pedidoId, 
+            @RequestBody StatusUpdateDTO statusUpdate) {
+        
+        return ResponseEntity.ok(
+            adminService.atualizarStatusPedido(
+                pedidoId, 
+                statusUpdate.getStatus(),
+                statusUpdate.getCodigoRastreio(),
+                statusUpdate.getLinkRastreio()
+            )
+>>>>>>> 05f4c2bbd4ddc53764e00cd8c7186b539edec53c
         );
     }
 

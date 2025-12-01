@@ -63,19 +63,32 @@ public class AdminService {
         Pedido pedidoSalvo = pedidoRepository.save(pedido);
 
         // === LÓGICA DE ENVIO DE EMAILS ===
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> 05f4c2bbd4ddc53764e00cd8c7186b539edec53c
         // 1. Email de Pagamento Confirmado
         if ("PAGO".equalsIgnoreCase(novoStatus) && !"PAGO".equalsIgnoreCase(statusAntigo)) {
             try {
                 System.out.println(">>> [ADMIN] Status mudou para PAGO. Enviando e-mail de confirmação de pagamento...");
                 int totalItens = pedidoSalvo.getItens().size();
                 System.out.println(">>> [ADMIN] Pedido tem " + totalItens + " itens. Enviando email...");
+<<<<<<< HEAD
 
                 emailService.enviarPagamentoConfirmado(pedidoSalvo);
 
                 System.out.println(">>> [ADMIN] E-mail de confirmação de pagamento enviado com sucesso para: "
                         + pedidoSalvo.getUsuario().getEmail());
 
+=======
+                
+                emailService.enviarPagamentoConfirmado(pedidoSalvo);
+                
+                System.out.println(">>> [ADMIN] E-mail de confirmação de pagamento enviado com sucesso para: " 
+                    + pedidoSalvo.getUsuario().getEmail());
+                    
+>>>>>>> 05f4c2bbd4ddc53764e00cd8c7186b539edec53c
             } catch (Exception e) {
                 System.err.println("!!! [ADMIN] ERRO ao enviar e-mail de confirmação de pagamento!");
                 System.err.println("!!! Pedido ID: " + pedidoId);
@@ -87,6 +100,7 @@ public class AdminService {
         if ("ENVIADO".equalsIgnoreCase(novoStatus) && !"ENVIADO".equalsIgnoreCase(statusAntigo)) {
             try {
                 System.out.println(">>> [ADMIN] Status mudou para ENVIADO. Enviando e-mail de pedido enviado...");
+<<<<<<< HEAD
 
                 if (pedidoSalvo.getCodigoRastreio() != null) {
                     System.out.println(">>> [ADMIN] Código de rastreio: " + pedidoSalvo.getCodigoRastreio());
@@ -97,6 +111,18 @@ public class AdminService {
                 System.out.println(">>> [ADMIN] E-mail de pedido enviado com sucesso para: "
                         + pedidoSalvo.getUsuario().getEmail());
 
+=======
+                
+                if (pedidoSalvo.getCodigoRastreio() != null) {
+                    System.out.println(">>> [ADMIN] Código de rastreio: " + pedidoSalvo.getCodigoRastreio());
+                }
+                
+                emailService.enviarPedidoEnviado(pedidoSalvo);
+                
+                System.out.println(">>> [ADMIN] E-mail de pedido enviado com sucesso para: " 
+                    + pedidoSalvo.getUsuario().getEmail());
+                    
+>>>>>>> 05f4c2bbd4ddc53764e00cd8c7186b539edec53c
             } catch (Exception e) {
                 System.err.println("!!! [ADMIN] ERRO ao enviar e-mail de pedido enviado!");
                 System.err.println("!!! Pedido ID: " + pedidoId);

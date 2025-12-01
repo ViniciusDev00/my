@@ -195,4 +195,8 @@ public class Pedido {
     public void setLinkRastreio(String linkRastreio) {
         this.linkRastreio = linkRastreio;
     }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 05f4c2bbd4ddc53764e00cd8c7186b539edec53c

@@ -211,6 +211,7 @@ public class EmailService {
      * DEVE SER CHAMADO PELO ADMINSERVICE/CONTROLLER ao mudar o status para "ENVIADO".
      */
     // ADICIONE ESTE MÉTODO NO SEU EmailService.java (após enviarPagamentoConfirmado)
+<<<<<<< HEAD
 
     @Async
     @Transactional
@@ -290,9 +291,90 @@ public class EmailService {
         } catch (MessagingException e) {
             e.printStackTrace();
             throw new RuntimeException("Falha ao enviar e-mail de pedido enviado", e);
-        }
-    }
+=======
+    
 
+@Async
+@Transactional
+public void enviarPedidoEnviado(Pedido pedido) {
+    try {
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+        String totalFormatado = String.format("%.2f", pedido.getValorTotal());
+        String dataPedido = pedido.getDataPedido().format(DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm"));
+
+        String itensHtml = buildItensHtml(pedido);
+        String enderecoHtml = buildEnderecoHtml(pedido);
+
+        // Link de rastreio (se disponível)
+        String rastreioHtml = "";
+        if (pedido.getCodigoRastreio() != null && !pedido.getCodigoRastreio().isEmpty()) {
+            rastreioHtml = "<div style='background: linear-gradient(135deg, rgba(0, 200, 83, 0.1), rgba(0, 0, 0, 0)); border: 1px solid " + COLOR_SUCCESS + "; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: center;'>" +
+                    "<h3 style='margin: 0 0 10px 0; color: " + COLOR_SUCCESS + ";'><i class='fas fa-shipping-fast'></i> Seu Pedido Foi Enviado!</h3>" +
+                    "<p style='margin: 0 0 15px 0; font-size: 0.95rem; color: " + COLOR_TEXT + ";'>Código de Rastreio: <strong>" + pedido.getCodigoRastreio() + "</strong></p>" +
+                    "<a href='" + pedido.getLinkRastreio() + "' style='display: inline-block; background-color: " + COLOR_SUCCESS + "; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin-top: 10px;'>Rastrear Pedido nos Correios</a>" +
+                    "</div>";
+>>>>>>> 05f4c2bbd4ddc53764e00cd8c7186b539edec53c
+        }
+
+        String bodyContent =
+                "<div style='text-align: center; margin-bottom: 30px;'>" +
+                        "<div style='background-color: " + COLOR_SUCCESS + "; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 15px;'>" +
+                        "<span style='color: white; font-size: 24px;'>📦</span>" +
+                        "</div>" +
+                        "<h1 style='color: " + COLOR_TEXT + "; margin: 0 0 10px 0; font-size: 28px;'>Seu Pedido Foi Enviado!</h1>" +
+                        "<p style='color: " + COLOR_TEXT_LIGHT + "; margin: 0; font-size: 16px;'>Olá, " + pedido.getUsuario().getNome() + "!</p>" +
+                        "<p style='color: " + COLOR_TEXT_LIGHT + "; margin-top: 10px; font-size: 15px;'>Seu pedido está a caminho! Confira os detalhes abaixo.</p>" +
+                        "</div>" +
+
+                        rastreioHtml +
+
+                        "<div style='background: linear-gradient(135deg, " + COLOR_PRIMARY + ", " + COLOR_PRIMARY_LIGHT + "); padding: 20px; border-radius: 12px; margin: 25px 0; text-align: center; color: white;'>" +
+                        "<div style='font-size: 13px; opacity: 0.9; margin-bottom: 5px;'>NÚMERO DO PEDIDO</div>" +
+                        "<div style='font-size: 24px; font-weight: 700; letter-spacing: 1px;'>#" + pedido.getId() + "</div>" +
+                        "</div>" +
+
+                        "<div style='display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 25px 0;'>" +
+                        "<div style='background-color: " + COLOR_BG + "; padding: 15px; border-radius: 8px; text-align: center;'>" +
+                        "<div style='font-size: 13px; color: " + COLOR_TEXT_LIGHT + "; margin-bottom: 5px;'>Data do Pedido</div>" +
+                        "<div style='font-weight: 600; color: " + COLOR_TEXT + ";'>" + dataPedido + "</div>" +
+                        "</div>" +
+                        "<div style='background-color: " + COLOR_BG + "; padding: 15px; border-radius: 8px; text-align: center;'>" +
+                        "<div style='font-size: 13px; color: " + COLOR_TEXT_LIGHT + "; margin-bottom: 5px;'>Status Atual</div>" +
+                        "<div style='font-weight: 600; color: " + COLOR_SUCCESS + ";'>EM TRÂNSITO 🚚</div>" +
+                        "</div>" +
+                        "</div>" +
+
+                        "<h3 style='color: " + COLOR_TEXT + "; margin: 30px 0 15px 0; font-size: 18px; border-bottom: 2px solid " + COLOR_BORDER + "; padding-bottom: 8px;'>Itens Enviados</h3>" +
+                        itensHtml +
+                        enderecoHtml +
+
+                        "<div style='text-align: center; margin: 40px 0 20px;'>" +
+                        "<a href='http://localhost:5500/FRONT/perfil/HTML/pedidos.html' style='display: inline-block; background: linear-gradient(135deg, " + COLOR_PRIMARY + ", " + COLOR_PRIMARY_LIGHT + "); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(255, 122, 0, 0.3); transition: all 0.3s ease;'>Acompanhar Entrega</a>" +
+                        "</div>" +
+
+                        buildSuporteFooter();
+
+        String finalHtml = getBaseTemplate(bodyContent, "Pedido Enviado #" + pedido.getId());
+
+        helper.setTo(pedido.getUsuario().getEmail());
+        helper.setSubject("📦 Seu Pedido Foi Enviado - Japa Universe #" + pedido.getId());
+        helper.setText(finalHtml, true);
+
+        try {
+            helper.setFrom("nao-responda@japauniverse.com.br", "Japa Universe");
+        } catch (UnsupportedEncodingException e) {
+            helper.setFrom("nao-responda@japauniverse.com.br");
+        }
+
+        mailSender.send(message);
+
+    } catch (MessagingException e) {
+        e.printStackTrace();
+        throw new RuntimeException("Falha ao enviar e-mail de pedido enviado", e);
+    }
+}
 
     // --- MÉTODOS AUXILIARES: HTML (Reutilizando a lógica) ---
 

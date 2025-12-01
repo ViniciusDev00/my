@@ -11,4 +11,8 @@ public class StatusUpdateDTO {
     private String status;
     private String codigoRastreio;
     private String linkRastreio;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 05f4c2bbd4ddc53764e00cd8c7186b539edec53c
