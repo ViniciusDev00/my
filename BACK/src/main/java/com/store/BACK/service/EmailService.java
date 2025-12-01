@@ -9,7 +9,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.transaction.annotation.Transactional; // NOVO IMPORT
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.UnsupportedEncodingException;
 import java.time.format.DateTimeFormatter;
@@ -33,6 +33,7 @@ public class EmailService {
     private final String COLOR_SUCCESS = "#48bb78";
     private final String COLOR_WARNING = "#ed8936"; // Cor para Aguardando Pagamento/Atenção
     private final String COLOR_ERROR = "#f56565";
+    private final String COLOR_INFO = "#3498db"; // NOVO: Cor para Pedido Enviado
 
     // MANTIDO: Método de conveniência que dispara a CONFIRMAÇÃO DE PEDIDO (Status: Processando)
     public void enviarConfirmacaoPagamento(Pedido pedido) {
@@ -46,13 +47,12 @@ public class EmailService {
      * Deve ser chamado imediatamente após o checkout.
      */
     @Async
-    @Transactional // CORREÇÃO 1: Garante que o acesso aos detalhes do pedido funcione.
+    @Transactional
     public void enviarPedidoRecebido(Pedido pedido) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            String totalFormatado = String.format("%.2f", pedido.getValorTotal());
             String dataPedido = pedido.getDataPedido().format(DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm"));
 
             // Constrói HTML do corpo do email (funções auxiliares)
@@ -130,7 +130,6 @@ public class EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            String totalFormatado = String.format("%.2f", pedido.getValorTotal());
             String dataPedido = pedido.getDataPedido().format(DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm"));
 
             // Constrói HTML do corpo do email (funções auxiliares)
@@ -201,6 +200,84 @@ public class EmailService {
         } catch (MessagingException e) {
             e.printStackTrace();
             throw new RuntimeException("Falha ao enviar e-mail de confirmação de pagamento", e);
+        }
+    }
+
+    // MÉTODO 3: PEDIDO ENVIADO (NOVO)
+    /**
+     * Envia o email de que o pedido foi enviado, incluindo o código e o link de rastreio.
+     * DEVE SER CHAMADO PELO ADMINSERVICE/CONTROLLER ao mudar o status para "ENVIADO".
+     */
+    @Async
+    @Transactional
+    public void enviarPedidoEnviado(Pedido pedido) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            String dataPedido = pedido.getDataPedido().format(DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm"));
+
+            // Constrói HTML do corpo do email (funções auxiliares)
+            String itensHtml = buildItensHtml(pedido);
+            String enderecoHtml = buildEnderecoHtml(pedido);
+
+            // Monta o corpo do e-mail com status ENVIADO (Azul/INFO)
+            String bodyContent =
+                    "<div style='text-align: center; margin-bottom: 30px;'>" +
+                            // Ícone: Enviado (Caminhão)
+                            "<div style='background-color: " + COLOR_INFO + "; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 15px;'>" +
+                            "<span style='color: white; font-size: 24px;'>🚚</span>" +
+                            "</div>" +
+                            "<h1 style='color: " + COLOR_TEXT + "; margin: 0 0 10px 0; font-size: 28px;'>Seu Pedido Foi Enviado!</h1>" +
+                            "<p style='color: " + COLOR_TEXT_LIGHT + "; margin: 0; font-size: 16px;'>Ótima notícia, " + pedido.getUsuario().getNome() + "! Seu pedido já está a caminho.</p>" +
+                            "<p style='color: " + COLOR_TEXT_LIGHT + "; margin-top: 10px; font-size: 15px;'>Você pode acompanhar a entrega usando as informações abaixo:</p>" +
+                            "</div>" +
+
+                            "<div style='background: linear-gradient(135deg, " + COLOR_INFO + ", #64b5f6); padding: 20px; border-radius: 12px; margin: 25px 0; text-align: center; color: white;'>" +
+                            "<div style='font-size: 13px; opacity: 0.9; margin-bottom: 5px;'>CÓDIGO DE RASTREIO</div>" +
+                            "<div style='font-size: 24px; font-weight: 700; letter-spacing: 2px;'>#" + pedido.getCodigoRastreio() + "</div>" +
+                            "</div>" +
+
+                            "<div style='text-align: center; margin: 30px 0 20px;'>" +
+                            "<a href='" + pedido.getLinkRastreio() + "' style='display: inline-block; background: linear-gradient(135deg, " + COLOR_PRIMARY + ", " + COLOR_PRIMARY_LIGHT + "); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(255, 122, 0, 0.3); transition: all 0.3s ease;'>RASTREAR MEU PEDIDO</a>" +
+                            "</div>" +
+
+                            "<h3 style='color: " + COLOR_TEXT + "; margin: 30px 0 15px 0; font-size: 18px; border-bottom: 2px solid " + COLOR_BORDER + "; padding-bottom: 8px;'>Detalhes do Pedido</h3>" +
+
+                            "<div style='display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 25px 0;'>" +
+                            "<div style='background-color: " + COLOR_BG + "; padding: 15px; border-radius: 8px; text-align: center;'>" +
+                            "<div style='font-size: 13px; color: " + COLOR_TEXT_LIGHT + "; margin-bottom: 5px;'>Data do Pedido</div>" +
+                            "<div style='font-weight: 600; color: " + COLOR_TEXT + ";'>" + dataPedido + "</div>" +
+                            "</div>" +
+                            "<div style='background-color: " + COLOR_BG + "; padding: 15px; border-radius: 8px; text-align: center;'>" +
+                            "<div style='font-size: 13px; color: " + COLOR_TEXT_LIGHT + "; margin-bottom: 5px;'>Status Atual</div>" +
+                            "<div style='font-weight: 600; color: " + COLOR_INFO + ";'>Pedido Enviado!</div>" +
+                            "</div>" +
+                            "</div>" +
+
+                            itensHtml +
+                            enderecoHtml +
+
+                            buildSuporteFooter();
+
+
+            String finalHtml = getBaseTemplate(bodyContent, "Pedido Enviado #" + pedido.getId());
+
+            helper.setTo(pedido.getUsuario().getEmail());
+            helper.setSubject("🚚 Seu Pedido Japa Universe Foi Enviado! #" + pedido.getId());
+            helper.setText(finalHtml, true);
+
+            try {
+                helper.setFrom("nao-responda@japauniverse.com.br", "Japa Universe");
+            } catch (UnsupportedEncodingException e) {
+                helper.setFrom("nao-responda@japauniverse.com.br");
+            }
+
+            mailSender.send(message);
+
+        } catch (MessagingException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Falha ao enviar e-mail de pedido enviado", e);
         }
     }
 

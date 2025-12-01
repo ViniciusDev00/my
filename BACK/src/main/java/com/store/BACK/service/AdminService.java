@@ -40,53 +40,66 @@ public class AdminService {
     }
 
     /**
-     * Atualiza o status de um pedido e envia um e-mail de confirmação
-     * se o status for alterado para "PAGO".
+     * Atualiza o status de um pedido, salvando informações adicionais (rastreio) se necessário,
+     * e envia um e-mail de confirmação.
      */
     @Transactional
-    public Pedido atualizarStatusPedido(Long pedidoId, String novoStatus) {
+    public Pedido atualizarStatusPedido(Long pedidoId, String novoStatus, String codigoRastreio, String linkRastreio) {
         // 1. Busca o pedido com FETCH para garantir que os itens sejam carregados
         Pedido pedido = pedidoRepository.findById(pedidoId)
                 .orElseThrow(() -> new RuntimeException("Pedido não encontrado"));
 
         String statusAntigo = pedido.getStatus();
 
-        // 2. Atualiza o status
+        // 2. Lógica para o status ENVIADO (novo requisito)
+        final String STATUS_ENVIADO = "ENVIADO";
+        if (STATUS_ENVIADO.equalsIgnoreCase(novoStatus) && !STATUS_ENVIADO.equalsIgnoreCase(statusAntigo)) {
+            if (codigoRastreio == null || codigoRastreio.trim().isEmpty() || linkRastreio == null || linkRastreio.trim().isEmpty()) {
+                throw new IllegalArgumentException("Código de rastreio e link são obrigatórios para o status ENVIADO.");
+            }
+            pedido.setCodigoRastreio(codigoRastreio);
+            pedido.setLinkRastreio(linkRastreio);
+        } else if (!STATUS_ENVIADO.equalsIgnoreCase(novoStatus)) {
+            // Se mudar para qualquer outro status, limpar o rastreio (opcional, mas seguro)
+            pedido.setCodigoRastreio(null);
+            pedido.setLinkRastreio(null);
+        }
+
+        // 3. Atualiza o status
         pedido.setStatus(novoStatus);
         Pedido pedidoSalvo = pedidoRepository.save(pedido);
 
-        // 3. Verifica se o status mudou para PAGO
+        // 4. Verifica e envia e-mails
         final String STATUS_PAGO = "PAGO";
 
         if (STATUS_PAGO.equalsIgnoreCase(novoStatus) && !STATUS_PAGO.equalsIgnoreCase(statusAntigo)) {
             try {
                 System.out.println(">>> [ADMIN] Status mudou para PAGO. Enviando e-mail de confirmação de pagamento...");
-
-                // IMPORTANTE: Força o carregamento dos itens antes de enviar o email
-                // para evitar LazyInitializationException
                 int totalItens = pedidoSalvo.getItens().size();
                 System.out.println(">>> [ADMIN] Pedido tem " + totalItens + " itens. Enviando email...");
-
-                // Envia o email de PAGAMENTO CONFIRMADO
                 emailService.enviarPagamentoConfirmado(pedidoSalvo);
-
                 System.out.println(">>> [ADMIN] E-mail de confirmação de pagamento enviado com sucesso para: "
                         + pedidoSalvo.getUsuario().getEmail());
-
             } catch (Exception e) {
-                // Log detalhado do erro
                 System.err.println("!!! [ADMIN] ERRO CRÍTICO ao enviar e-mail de confirmação de pagamento!");
-                System.err.println("!!! Pedido ID: " + pedidoId);
-                System.err.println("!!! Cliente: " + pedidoSalvo.getUsuario().getEmail());
-                System.err.println("!!! Mensagem de erro: " + e.getMessage());
                 e.printStackTrace();
-
-                // IMPORTANTE: Não lançar exceção aqui para não reverter a transação
-                // O pedido já foi salvo com status PAGO, o email é secundário
             }
-        } else {
+        }
+
+        if (STATUS_ENVIADO.equalsIgnoreCase(novoStatus) && !STATUS_ENVIADO.equalsIgnoreCase(statusAntigo)) {
+            try {
+                System.out.println(">>> [ADMIN] Status mudou para ENVIADO. Enviando e-mail de rastreio...");
+                emailService.enviarPedidoEnviado(pedidoSalvo);
+                System.out.println(">>> [ADMIN] E-mail de pedido enviado com sucesso para: "
+                        + pedidoSalvo.getUsuario().getEmail());
+            } catch (Exception e) {
+                System.err.println("!!! [ADMIN] ERRO CRÍTICO ao enviar e-mail de pedido enviado!");
+                e.printStackTrace();
+            }
+        }
+        else {
             System.out.println(">>> [ADMIN] Status atualizado de " + statusAntigo + " para " + novoStatus +
-                    ". Nenhum e-mail adicional será enviado.");
+                    ". Nenhum e-mail adicional será enviado (ou já foi enviado).");
         }
 
         return pedidoSalvo;

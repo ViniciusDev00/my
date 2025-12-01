@@ -46,7 +46,7 @@
                             </tr>
                         </thead>
                         <tbody id="pedidos-table-body">
-                            </tbody>
+                           </tbody>
                     </table>
                 </div>
             </section>
@@ -98,6 +98,37 @@
         </main>
     </div>
 
+    <div id="tracking-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="tracking-modal-title">Informações de Rastreio</h3>
+                <button id="close-tracking-modal-btn" class="close-modal">&times;</button>
+            </div>
+            <form id="tracking-form">
+                <input type="hidden" id="tracking-pedido-id">
+                <input type="hidden" id="tracking-new-status" value="ENVIADO">
+                
+                <p style="margin-bottom: 20px; color: var(--text-secondary);">
+                    Insira o código de rastreio para notificar o cliente sobre o envio.
+                </p>
+
+                <div class="form-group">
+                    <label for="codigo-rastreio">Código de Rastreio</label>
+                    <input type="text" id="codigo-rastreio" required>
+                </div>
+                
+                <p style="margin-top: -10px; margin-bottom: 20px; font-size: 0.9em; color: var(--text-secondary);">
+                    O link de rastreio será: **https://rastreamento.correios.com.br/** + código
+                </p>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">
+                        Confirmar Envio e Notificar Cliente
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
     <div id="product-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">

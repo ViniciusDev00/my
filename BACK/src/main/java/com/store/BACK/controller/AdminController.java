@@ -49,9 +49,18 @@ public class AdminController {
     }
 
     @PatchMapping("/pedidos/{pedidoId}/status")
-    public ResponseEntity<Pedido> updatePedidoStatus(@PathVariable Long pedidoId, @RequestBody Map<String, String> statusUpdate) {
+    public ResponseEntity<?> updatePedidoStatus(@PathVariable Long pedidoId, @RequestBody Map<String, String> statusUpdate) {
         String status = statusUpdate.get("status");
-        return ResponseEntity.ok(adminService.atualizarStatusPedido(pedidoId, status));
+        String codigoRastreio = statusUpdate.get("codigoRastreio"); // NOVO CAMPO
+        String linkRastreio = statusUpdate.get("linkRastreio");     // NOVO CAMPO
+
+        try {
+            Pedido pedido = adminService.atualizarStatusPedido(pedidoId, status, codigoRastreio, linkRastreio);
+            return ResponseEntity.ok(pedido);
+        } catch (IllegalArgumentException e) {
+            // Retorna um erro 400 Bad Request se faltarem informações de rastreio
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     // Endpoints de Produtos

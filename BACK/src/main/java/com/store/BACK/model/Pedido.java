@@ -49,6 +49,14 @@ public class Pedido {
     @Column(name = "observacoes", columnDefinition = "TEXT")
     private String observacoes;
 
+    // --- NOVOS CAMPOS PARA RASTREIO (Adicionar) ---
+    @Column(name = "codigo_rastreio")
+    private String codigoRastreio;
+
+    @Column(name = "link_rastreio", columnDefinition = "TEXT")
+    private String linkRastreio;
+    // --- FIM NOVOS CAMPOS PARA RASTREIO ---
+
     // --- NOVOS CAMPOS DE OPÇÕES (Adicionar) ---
     private boolean comCaixa;
     private boolean entregaPrioritaria;
@@ -156,6 +164,23 @@ public class Pedido {
 
     public void setItens(List<ItemPedido> itens) {
         this.itens = itens;
+    }
+
+    // Getters e Setters dos NOVOS campos de RASTREIO
+    public String getCodigoRastreio() {
+        return codigoRastreio;
+    }
+
+    public void setCodigoRastreio(String codigoRastreio) {
+        this.codigoRastreio = codigoRastreio;
+    }
+
+    public String getLinkRastreio() {
+        return linkRastreio;
+    }
+
+    public void setLinkRastreio(String linkRastreio) {
+        this.linkRastreio = linkRastreio;
     }
 
     // Getters e Setters dos NOVOS campos
