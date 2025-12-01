@@ -2,6 +2,7 @@ package com.store.BACK.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.store.BACK.dto.PedidoAdminResponse;
+import com.store.BACK.dto.StatusUpdateDTO;
 import com.store.BACK.model.Contato;
 import com.store.BACK.model.Pedido;
 import com.store.BACK.model.PedidoAviso;
@@ -16,7 +17,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -27,13 +27,11 @@ public class AdminController {
     private final PedidoAvisoService pedidoAvisoService;
     private final ObjectMapper objectMapper;
 
-    // --- NOVO ENDPOINT PARA MENSAGENS ---
     @GetMapping("/contatos")
     public ResponseEntity<List<Contato>> getAllContatos() {
         return ResponseEntity.ok(adminService.listarTodasAsMensagens());
     }
 
-    // Endpoints de Pedidos
     @GetMapping("/pedidos")
     public ResponseEntity<List<PedidoAdminResponse>> getAllPedidos() {
         return ResponseEntity.ok(adminService.listarTodosOsPedidos());
@@ -48,22 +46,24 @@ public class AdminController {
         return ResponseEntity.notFound().build();
     }
 
+    /**
+     * ENDPOINT CORRIGIDO: Aceita status + código/link de rastreio
+     */
     @PatchMapping("/pedidos/{pedidoId}/status")
-    public ResponseEntity<?> updatePedidoStatus(@PathVariable Long pedidoId, @RequestBody Map<String, String> statusUpdate) {
-        String status = statusUpdate.get("status");
-        String codigoRastreio = statusUpdate.get("codigoRastreio"); // NOVO CAMPO
-        String linkRastreio = statusUpdate.get("linkRastreio");     // NOVO CAMPO
-
-        try {
-            Pedido pedido = adminService.atualizarStatusPedido(pedidoId, status, codigoRastreio, linkRastreio);
-            return ResponseEntity.ok(pedido);
-        } catch (IllegalArgumentException e) {
-            // Retorna um erro 400 Bad Request se faltarem informações de rastreio
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
+    public ResponseEntity<Pedido> updatePedidoStatus(
+            @PathVariable Long pedidoId, 
+            @RequestBody StatusUpdateDTO statusUpdate) {
+        
+        return ResponseEntity.ok(
+            adminService.atualizarStatusPedido(
+                pedidoId, 
+                statusUpdate.getStatus(),
+                statusUpdate.getCodigoRastreio(),
+                statusUpdate.getLinkRastreio()
+            )
+        );
     }
 
-    // Endpoints de Produtos
     @GetMapping("/produtos")
     public ResponseEntity<List<Produto>> getAllProdutos() {
         return ResponseEntity.ok(adminService.listarTodosOsProdutos());
