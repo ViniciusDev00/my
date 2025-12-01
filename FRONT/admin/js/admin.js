@@ -734,4 +734,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     await fetchBrandsAndCategories(); 
     // A chamada está aqui no final, mas a função switchView está definida acima, resolvendo o erro.
     switchView('pedidos'); 
-});
+}); 
