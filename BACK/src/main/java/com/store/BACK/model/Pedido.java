@@ -36,7 +36,7 @@ public class Pedido {
     @JoinColumn(name = "endereco_id", nullable = false)
     private Endereco enderecoDeEntrega;
 
-    // --- CAMPOS DE DESTINATÁRIO (Manter) ---
+    // --- CAMPOS DE DESTINATÁRIO ---
     @Column(name = "nome_destinatario")
     private String nomeDestinatario;
 
@@ -49,24 +49,23 @@ public class Pedido {
     @Column(name = "observacoes", columnDefinition = "TEXT")
     private String observacoes;
 
-    // --- NOVOS CAMPOS PARA RASTREIO (Adicionar) ---
+    // --- CAMPOS DE OPÇÕES ---
+    private boolean comCaixa;
+    private boolean entregaPrioritaria;
+
+    // --- NOVOS CAMPOS DE RASTREIO ---
     @Column(name = "codigo_rastreio")
     private String codigoRastreio;
 
-    @Column(name = "link_rastreio", columnDefinition = "TEXT")
+    @Column(name = "link_rastreio")
     private String linkRastreio;
-    // --- FIM NOVOS CAMPOS PARA RASTREIO ---
-
-    // --- NOVOS CAMPOS DE OPÇÕES (Adicionar) ---
-    private boolean comCaixa;
-    private boolean entregaPrioritaria;
     // --- FIM NOVOS CAMPOS ---
 
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference("pedido-itens")
     private List<ItemPedido> itens;
 
-    // Getters e Setters Manuais (Para resolver os erros de método)
+    // Getters e Setters (todos os existentes + os novos)
 
     public Long getId() {
         return id;
@@ -112,7 +111,6 @@ public class Pedido {
         return pixCopiaECola;
     }
 
-    // ESTE MÉTODO ESTAVA DANDO ERRO NO SERVICE
     public void setPixCopiaECola(String pixCopiaECola) {
         this.pixCopiaECola = pixCopiaECola;
     }
@@ -121,7 +119,6 @@ public class Pedido {
         return enderecoDeEntrega;
     }
 
-    // ESTE MÉTODO ESTAVA DANDO ERRO NO SERVICE
     public void setEnderecoDeEntrega(Endereco enderecoDeEntrega) {
         this.enderecoDeEntrega = enderecoDeEntrega;
     }
@@ -166,24 +163,6 @@ public class Pedido {
         this.itens = itens;
     }
 
-    // Getters e Setters dos NOVOS campos de RASTREIO
-    public String getCodigoRastreio() {
-        return codigoRastreio;
-    }
-
-    public void setCodigoRastreio(String codigoRastreio) {
-        this.codigoRastreio = codigoRastreio;
-    }
-
-    public String getLinkRastreio() {
-        return linkRastreio;
-    }
-
-    public void setLinkRastreio(String linkRastreio) {
-        this.linkRastreio = linkRastreio;
-    }
-
-    // Getters e Setters dos NOVOS campos
     public boolean isComCaixa() {
         return comCaixa;
     }
@@ -198,5 +177,22 @@ public class Pedido {
 
     public void setEntregaPrioritaria(boolean entregaPrioritaria) {
         this.entregaPrioritaria = entregaPrioritaria;
+    }
+
+    // NOVOS GETTERS/SETTERS DE RASTREIO
+    public String getCodigoRastreio() {
+        return codigoRastreio;
+    }
+
+    public void setCodigoRastreio(String codigoRastreio) {
+        this.codigoRastreio = codigoRastreio;
+    }
+
+    public String getLinkRastreio() {
+        return linkRastreio;
+    }
+
+    public void setLinkRastreio(String linkRastreio) {
+        this.linkRastreio = linkRastreio;
     }
 }
