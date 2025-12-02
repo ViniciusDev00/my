@@ -25,6 +25,9 @@ public class AdminService {
     private final ContatoRepository contatoRepository;
     private final EmailService emailService;
 
+    // LINK FIXO DOS CORREIOS
+    private final String CORREIOS_LINK_BASE = "https://rastreamento.correios.com.br/app/index.php?e2s=SRO&a=";
+
     public List<PedidoAdminResponse> listarTodosOsPedidos() {
         return pedidoRepository.findAllWithUsuario().stream()
                 .map(PedidoAdminResponse::fromPedido)
@@ -39,67 +42,68 @@ public class AdminService {
         return contatoRepository.findAll();
     }
 
-    /**
-     * Atualiza o status de um pedido e envia emails conforme o novo status.
-     * - PAGO: Email de confirmação de pagamento
-     * - ENVIADO: Email de pedido enviado com código de rastreio
-     */
     @Transactional
     public Pedido atualizarStatusPedido(Long pedidoId, String novoStatus, String codigoRastreio, String linkRastreio) {
+        // 1. Busca o pedido
         Pedido pedido = pedidoRepository.findById(pedidoId)
                 .orElseThrow(() -> new RuntimeException("Pedido não encontrado"));
 
         String statusAntigo = pedido.getStatus();
-        pedido.setStatus(novoStatus);
 
-        // Se for ENVIADO, salva os dados de rastreio
-        if ("ENVIADO".equalsIgnoreCase(novoStatus)) {
-            if (codigoRastreio != null && !codigoRastreio.trim().isEmpty()) {
-                pedido.setCodigoRastreio(codigoRastreio);
-                pedido.setLinkRastreio(linkRastreio);
+        // 2. Lógica para o status ENVIADO (Gera o link automaticamente)
+        final String STATUS_ENVIADO = "ENVIADO";
+        if (STATUS_ENVIADO.equalsIgnoreCase(novoStatus) && !STATUS_ENVIADO.equalsIgnoreCase(statusAntigo)) {
+            if (codigoRastreio == null || codigoRastreio.trim().isEmpty()) {
+                throw new IllegalArgumentException("Código de rastreio é obrigatório para o status ENVIADO.");
             }
+            pedido.setCodigoRastreio(codigoRastreio);
+            // Concatena o link fixo com o código
+            pedido.setLinkRastreio(CORREIOS_LINK_BASE + codigoRastreio);
+        } else if (!STATUS_ENVIADO.equalsIgnoreCase(novoStatus)) {
+            pedido.setCodigoRastreio(null);
+            pedido.setLinkRastreio(null);
         }
 
+        // 3. Atualiza o status
+        pedido.setStatus(novoStatus);
         Pedido pedidoSalvo = pedidoRepository.save(pedido);
 
-        // === LÓGICA DE ENVIO DE EMAILS ===
+        // 4. ENVIOS DE E-MAIL
+        final String STATUS_PAGO = "PAGO";
 
-        // 1. Email de Pagamento Confirmado
-        if ("PAGO".equalsIgnoreCase(novoStatus) && !"PAGO".equalsIgnoreCase(statusAntigo)) {
+        // E-mail de Pagamento Confirmado
+        if (STATUS_PAGO.equalsIgnoreCase(novoStatus) && !STATUS_PAGO.equalsIgnoreCase(statusAntigo)) {
             try {
-                System.out.println(">>> [ADMIN] Status mudou para PAGO. Enviando e-mail de confirmação de pagamento...");
-                int totalItens = pedidoSalvo.getItens().size();
-                System.out.println(">>> [ADMIN] Pedido tem " + totalItens + " itens. Enviando email...");
-
+                // Inicializa dados para evitar erro no Async
+                pedidoSalvo.getItens().size();
+                pedidoSalvo.getUsuario().getEmail();
                 emailService.enviarPagamentoConfirmado(pedidoSalvo);
-
-                System.out.println(">>> [ADMIN] E-mail de confirmação de pagamento enviado com sucesso para: "
-                        + pedidoSalvo.getUsuario().getEmail());
-
             } catch (Exception e) {
-                System.err.println("!!! [ADMIN] ERRO ao enviar e-mail de confirmação de pagamento!");
-                System.err.println("!!! Pedido ID: " + pedidoId);
                 e.printStackTrace();
             }
         }
 
-        // 2. Email de Pedido Enviado
-        if ("ENVIADO".equalsIgnoreCase(novoStatus) && !"ENVIADO".equalsIgnoreCase(statusAntigo)) {
+        // E-mail de Pedido Enviado
+        if (STATUS_ENVIADO.equalsIgnoreCase(novoStatus) && !STATUS_ENVIADO.equalsIgnoreCase(statusAntigo)) {
             try {
-                System.out.println(">>> [ADMIN] Status mudou para ENVIADO. Enviando e-mail de pedido enviado...");
+                System.out.println(">>> [ADMIN] Status ENVIADO detectado. Preparando dados para e-mail...");
+
+                // --- CORREÇÃO CRÍTICA: INICIALIZAÇÃO DE DADOS ---
+                // Acessamos explicitamente os dados LAZY (usuário, itens, endereço)
+                // para garantir que o Hibernate os busque antes de passar para a thread de e-mail.
+                String email = pedidoSalvo.getUsuario().getEmail();
+                String nome = pedidoSalvo.getUsuario().getNome();
+                int itens = pedidoSalvo.getItens().size();
+                String rua = pedidoSalvo.getEnderecoDeEntrega().getRua();
+
+                System.out.println(">>> [ADMIN] Dados carregados com sucesso: " + email);
 
                 if (pedidoSalvo.getCodigoRastreio() != null) {
-                    System.out.println(">>> [ADMIN] Código de rastreio: " + pedidoSalvo.getCodigoRastreio());
+                    emailService.enviarPedidoEnviado(pedidoSalvo);
+                    System.out.println(">>> [ADMIN] E-mail de rastreio disparado.");
                 }
-
-                emailService.enviarPedidoEnviado(pedidoSalvo);
-
-                System.out.println(">>> [ADMIN] E-mail de pedido enviado com sucesso para: "
-                        + pedidoSalvo.getUsuario().getEmail());
-
             } catch (Exception e) {
-                System.err.println("!!! [ADMIN] ERRO ao enviar e-mail de pedido enviado!");
-                System.err.println("!!! Pedido ID: " + pedidoId);
+                System.err.println("!!! [ADMIN] Erro ao preparar e-mail de envio: " + e.getMessage());
                 e.printStackTrace();
             }
         }

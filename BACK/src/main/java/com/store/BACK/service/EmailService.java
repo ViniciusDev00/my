@@ -33,19 +33,18 @@ public class EmailService {
     private final String COLOR_SUCCESS = "#48bb78";
     private final String COLOR_WARNING = "#ed8936"; // Cor para Aguardando Pagamento/Atenção
     private final String COLOR_ERROR = "#f56565";
-    private final String COLOR_INFO = "#3498db"; // NOVO: Cor para Pedido Enviado
+    private final String COLOR_INFO = "#3498db"; // Cor para Pedido Enviado
 
-    // MANTIDO: Método de conveniência que dispara a CONFIRMAÇÃO DE PEDIDO (Status: Processando)
+    // ENDEREÇOS PADRONIZADOS
+    private static final String REMETENTE_TRANSACIONAL = "nao-responda@japauniverse.com.br";
+    private static final String REMETENTE_AUTENTICADO = "japauniversestore@gmail.com";
+
+    // MANTIDO: Método de conveniência que dispara a CONFIRMAÇÃO DE PEDIDO
     public void enviarConfirmacaoPagamento(Pedido pedido) {
-        // Dispara o email de PEDIDO RECEBIDO, pois o pagamento ainda está sendo processado.
         enviarPedidoRecebido(pedido);
     }
 
     // MÉTODO 1: PEDIDO RECEBIDO (STATUS: PROCESSANDO / AGUARDANDO PAGAMENTO)
-    /**
-     * Envia o email de confirmação de que o pedido foi criado, mas o pagamento ainda está pendente.
-     * Deve ser chamado imediatamente após o checkout.
-     */
     @Async
     @Transactional
     public void enviarPedidoRecebido(Pedido pedido) {
@@ -55,15 +54,13 @@ public class EmailService {
 
             String dataPedido = pedido.getDataPedido().format(DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm"));
 
-            // Constrói HTML do corpo do email (funções auxiliares)
             String itensHtml = buildItensHtml(pedido);
             String enderecoHtml = buildEnderecoHtml(pedido);
 
             String bodyContent =
                     "<div style='text-align: center; margin-bottom: 30px;'>" +
-                            // Ícone: Recebido/Processando (Relógio)
                             "<div style='background-color: " + COLOR_WARNING + "; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 15px;'>" +
-                            "<span style='color: white; font-size: 24px;'>🕒</span>" + // Ícone de relógio/tempo
+                            "<span style='color: white; font-size: 24px;'>🕒</span>" +
                             "</div>" +
                             "<h1 style='color: " + COLOR_TEXT + "; margin: 0 0 10px 0; font-size: 28px;'>Pedido Recebido!</h1>" +
                             "<p style='color: " + COLOR_TEXT_LIGHT + "; margin: 0; font-size: 16px;'>Obrigado pela sua compra, " + pedido.getUsuario().getNome() + "!</p>" +
@@ -91,7 +88,6 @@ public class EmailService {
                             enderecoHtml +
 
                             "<div style='text-align: center; margin: 40px 0 20px;'>" +
-                            // Botão que leva à página de pagamento (inclui ID na URL)
                             "<a href='http://localhost:5500/FRONT/pagamento/HTML/pagamento.html?id=" + pedido.getId() + "' style='display: inline-block; background: linear-gradient(135deg, " + COLOR_PRIMARY + ", " + COLOR_PRIMARY_LIGHT + "); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(255, 122, 0, 0.3); transition: all 0.3s ease;'>Acessar Página de Pagamento</a>" +
                             "</div>" +
 
@@ -105,9 +101,9 @@ public class EmailService {
             helper.setText(finalHtml, true);
 
             try {
-                helper.setFrom("nao-responda@japauniverse.com.br", "Japa Universe");
+                helper.setFrom(REMETENTE_TRANSACIONAL, "Japa Universe");
             } catch (UnsupportedEncodingException e) {
-                helper.setFrom("nao-responda@japauniverse.com.br");
+                helper.setFrom(REMETENTE_TRANSACIONAL);
             }
 
             mailSender.send(message);
@@ -119,12 +115,8 @@ public class EmailService {
     }
 
     // MÉTODO 2: PAGAMENTO CONFIRMADO (STATUS: PAGO)
-    /**
-     * Envia o email de confirmação de que o pagamento foi identificado e o pedido segue para preparação.
-     * DEVE SER CHAMADO PELO ADMINSERVICE/CONTROLLER ao mudar o status para "PAGO".
-     */
     @Async
-    @Transactional // CORREÇÃO 2: Garante que o acesso aos detalhes do pedido funcione.
+    @Transactional
     public void enviarPagamentoConfirmado(Pedido pedido) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -132,14 +124,11 @@ public class EmailService {
 
             String dataPedido = pedido.getDataPedido().format(DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm"));
 
-            // Constrói HTML do corpo do email (funções auxiliares)
             String itensHtml = buildItensHtml(pedido);
             String enderecoHtml = buildEnderecoHtml(pedido);
 
-            // Monta o corpo do e-mail com status SUCESSO
             String bodyContent =
                     "<div style='text-align: center; margin-bottom: 30px;'>" +
-                            // Ícone: Confirmação de Sucesso (Checkmark)
                             "<div style='background-color: " + COLOR_SUCCESS + "; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 15px;'>" +
                             "<span style='color: white; font-size: 24px;'>✓</span>" +
                             "</div>" +
@@ -172,13 +161,11 @@ public class EmailService {
                             "<a href='http://localhost:5500/FRONT/perfil/HTML/pedidos.html' style='display: inline-block; background: linear-gradient(135deg, " + COLOR_PRIMARY + ", " + COLOR_PRIMARY_LIGHT + "); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(255, 122, 0, 0.3); transition: all 0.3s ease;'>Acompanhar Pedido (Em Preparação)</a>" +
                             "</div>" +
 
-                            // NOVO REQUISITO: Mensagem de agradecimento e avisos na aba
                             "<div style='text-align: center; margin-top: 30px; padding: 20px; border: 1px solid " + COLOR_BORDER + "; border-radius: 8px; background-color: #f0f8ff;'>" +
                             "<p style='color: " + COLOR_TEXT + "; font-size: 15px; margin: 0; font-weight: 500;'>" +
                             "Receberá atualizações sobre o seu pedido tanto por e-mail quanto na aba <span style='font-weight: 700; color: " + COLOR_PRIMARY + ";'>'Avisos'</span> dentro da sua página de pedidos na loja. Obrigado por comprar na Japa Universe!" +
                             "</p>" +
                             "</div>" +
-                            // FIM NOVO REQUISITO
 
                             buildSuporteFooter();
 
@@ -190,9 +177,9 @@ public class EmailService {
             helper.setText(finalHtml, true);
 
             try {
-                helper.setFrom("nao-responda@japauniverse.com.br", "Japa Universe");
+                helper.setFrom(REMETENTE_TRANSACIONAL, "Japa Universe");
             } catch (UnsupportedEncodingException e) {
-                helper.setFrom("nao-responda@japauniverse.com.br");
+                helper.setFrom(REMETENTE_TRANSACIONAL);
             }
 
             mailSender.send(message);
@@ -204,17 +191,7 @@ public class EmailService {
     }
 
 
-
-    // MÉTODO 3: PEDIDO ENVIADO (NOVO)
-    /**
-     * Envia o email de que o pedido foi enviado, incluindo o código e o link de rastreio.
-     * DEVE SER CHAMADO PELO ADMINSERVICE/CONTROLLER ao mudar o status para "ENVIADO".
-     */
-    // ADICIONE ESTE MÉTODO NO SEU EmailService.java (após enviarPagamentoConfirmado)
-
-
-    // ADICIONE ESTE MÉTODO NO SEU EmailService.java (após enviarPagamentoConfirmado)
-
+    // MÉTODO 3: PEDIDO ENVIADO (CORRIGIDO E COMPLETADO)
     @Async
     @Transactional
     public void enviarPedidoEnviado(Pedido pedido) {
@@ -222,26 +199,25 @@ public class EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            String totalFormatado = String.format("%.2f", pedido.getValorTotal());
             String dataPedido = pedido.getDataPedido().format(DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm"));
 
             String itensHtml = buildItensHtml(pedido);
             String enderecoHtml = buildEnderecoHtml(pedido);
 
-            // Link de rastreio (se disponível)
+            // Link de rastreio
             String rastreioHtml = "";
             if (pedido.getCodigoRastreio() != null && !pedido.getCodigoRastreio().isEmpty()) {
-                rastreioHtml = "<div style='background: linear-gradient(135deg, rgba(0, 200, 83, 0.1), rgba(0, 0, 0, 0)); border: 1px solid " + COLOR_SUCCESS + "; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: center;'>" +
-                        "<h3 style='margin: 0 0 10px 0; color: " + COLOR_SUCCESS + ";'><i class='fas fa-shipping-fast'></i> Seu Pedido Foi Enviado!</h3>" +
+                rastreioHtml = "<div style='background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(0, 0, 0, 0)); border: 1px solid " + COLOR_INFO + "; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: center;'>" +
+                        "<h3 style='margin: 0 0 10px 0; color: " + COLOR_INFO + ";'><i class='fas fa-shipping-fast'></i> Seu Pedido Foi Enviado!</h3>" +
                         "<p style='margin: 0 0 15px 0; font-size: 0.95rem; color: " + COLOR_TEXT + ";'>Código de Rastreio: <strong>" + pedido.getCodigoRastreio() + "</strong></p>" +
-                        "<a href='" + pedido.getLinkRastreio() + "' style='display: inline-block; background-color: " + COLOR_SUCCESS + "; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin-top: 10px;'>Rastrear Pedido nos Correios</a>" +
+                        "<a href='" + pedido.getLinkRastreio() + "' style='display: inline-block; background-color: " + COLOR_INFO + "; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin-top: 10px;'>RASTREAR PEDIDO</a>" +
                         "</div>";
             }
 
             String bodyContent =
                     "<div style='text-align: center; margin-bottom: 30px;'>" +
-                            "<div style='background-color: " + COLOR_SUCCESS + "; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 15px;'>" +
-                            "<span style='color: white; font-size: 24px;'>📦</span>" +
+                            "<div style='background-color: " + COLOR_INFO + "; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 15px;'>" +
+                            "<span style='color: white; font-size: 24px;'>🚚</span>" +
                             "</div>" +
                             "<h1 style='color: " + COLOR_TEXT + "; margin: 0 0 10px 0; font-size: 28px;'>Seu Pedido Foi Enviado!</h1>" +
                             "<p style='color: " + COLOR_TEXT_LIGHT + "; margin: 0; font-size: 16px;'>Olá, " + pedido.getUsuario().getNome() + "!</p>" +
@@ -262,7 +238,7 @@ public class EmailService {
                             "</div>" +
                             "<div style='background-color: " + COLOR_BG + "; padding: 15px; border-radius: 8px; text-align: center;'>" +
                             "<div style='font-size: 13px; color: " + COLOR_TEXT_LIGHT + "; margin-bottom: 5px;'>Status Atual</div>" +
-                            "<div style='font-weight: 600; color: " + COLOR_SUCCESS + ";'>EM TRÂNSITO 🚚</div>" +
+                            "<div style='font-weight: 600; color: " + COLOR_INFO + ";'>EM TRÂNSITO 🚚</div>" +
                             "</div>" +
                             "</div>" +
 
@@ -279,13 +255,14 @@ public class EmailService {
             String finalHtml = getBaseTemplate(bodyContent, "Pedido Enviado #" + pedido.getId());
 
             helper.setTo(pedido.getUsuario().getEmail());
-            helper.setSubject("📦 Seu Pedido Foi Enviado - Japa Universe #" + pedido.getId());
+            helper.setSubject("🚚 Seu Pedido Foi Enviado - Japa Universe #" + pedido.getId());
             helper.setText(finalHtml, true);
 
             try {
-                helper.setFrom("nao-responda@japauniverse.com.br", "Japa Universe");
+                // PADRONIZADO: Transacional
+                helper.setFrom(REMETENTE_TRANSACIONAL, "Japa Universe");
             } catch (UnsupportedEncodingException e) {
-                helper.setFrom("nao-responda@japauniverse.com.br");
+                helper.setFrom(REMETENTE_TRANSACIONAL);
             }
 
             mailSender.send(message);
@@ -297,7 +274,7 @@ public class EmailService {
     }
 
 
-    // --- MÉTODOS AUXILIARES: HTML (Reutilizando a lógica) ---
+    // --- MÉTODOS AUXILIARES: HTML ---
 
     private String buildItensHtml(Pedido pedido) {
         StringBuilder itensHtml = new StringBuilder();
@@ -307,13 +284,12 @@ public class EmailService {
                 .append("<th align='left' style='padding: 12px; font-weight: 600;'>Produto</th>")
                 .append("<th align='center' style='padding: 12px; font-weight: 600;'>Qtd</th>")
                 .append("<th align='right' style='padding: 12px; font-weight: 600;'>Valor</th>")
-                .append("</tr>")
+                .append("</tr>") // <<< ERRO DE SINTAXE CORRIGIDO AQUI
                 .append("</thead>")
                 .append("<tbody>");
 
         for (ItemPedido item : pedido.getItens()) {
             String precoItem = String.format("%.2f", item.getPrecoUnitario());
-            // Usar multiply() para BigDecimal
             BigDecimal totalItemValue = item.getPrecoUnitario().multiply(BigDecimal.valueOf(item.getQuantidade()));
             String totalItem = String.format("%.2f", totalItemValue);
 
@@ -356,7 +332,7 @@ public class EmailService {
                 "</div>";
     }
 
-    // O método sendPasswordResetEmail original foi mantido e apenas copiado aqui.
+    // O método sendPasswordResetEmail original foi mantido
     @Async
     public void sendPasswordResetEmail(String to, String token) {
         try {
@@ -397,12 +373,10 @@ public class EmailService {
             helper.setSubject("🔐 Redefinição de Senha - Japa Universe");
             helper.setText(finalHtml, true);
 
-            // CORREÇÃO: Tratar UnsupportedEncodingException
             try {
-                helper.setFrom("japauniversestore@gmail.com", "Japa Universe");
+                helper.setFrom(REMETENTE_AUTENTICADO, "Japa Universe");
             } catch (UnsupportedEncodingException e) {
-                // Fallback: usar setFrom sem personalização
-                helper.setFrom("japauniversestore@gmail.com");
+                helper.setFrom(REMETENTE_AUTENTICADO);
             }
 
             mailSender.send(message);
