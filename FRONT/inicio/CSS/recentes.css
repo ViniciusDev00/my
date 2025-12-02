@@ -133,8 +133,10 @@
   background: linear-gradient(90deg, transparent, var(--border-color), transparent);
 }
 
+/* --- CORREÇÃO DE LARGURA DO SLIDE --- */
 .swiper[class*="collection-swiper"] .swiper-slide {
   width: 320px !important;
+  max-width: 85vw; /* Garante que não quebre em telas muito pequenas */
   transition: transform 0.3s ease;
 }
 

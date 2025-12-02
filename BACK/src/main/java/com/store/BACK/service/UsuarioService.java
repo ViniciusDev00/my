@@ -1,7 +1,9 @@
 package com.store.BACK.service;
 
 import com.store.BACK.dto.UsuarioDTO;
+import com.store.BACK.model.Pedido;
 import com.store.BACK.model.Usuario;
+import com.store.BACK.repository.PedidoRepository;
 import com.store.BACK.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -13,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -20,6 +23,7 @@ import java.util.UUID;
 public class UsuarioService implements UserDetailsService {
 
     private final UsuarioRepository usuarioRepository;
+    private final PedidoRepository pedidoRepository; // INJEÇÃO ADICIONADA
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 
@@ -51,7 +55,11 @@ public class UsuarioService implements UserDetailsService {
         dto.setTelefone(usuario.getTelefone());
         dto.setRole(usuario.getRole());
         dto.setEnderecos(usuario.getEnderecos());
-        dto.setPedidos(null);
+
+        // --- CORREÇÃO: Busca os pedidos reais em vez de retornar null ---
+        List<Pedido> pedidos = pedidoRepository.findByUsuarioId(usuario.getId());
+        dto.setPedidos(pedidos);
+        // ---------------------------------------------------------------
 
         return dto;
     }
@@ -76,8 +84,7 @@ public class UsuarioService implements UserDetailsService {
             usuario.setTelefone(dados.getTelefone());
         }
 
-        // REMOVIDA A LÓGICA DE ATUALIZAÇÃO DE E-MAIL
-        // O e-mail permanece o mesmo que já estava no banco.
+        // OBS: A lógica de atualização de e-mail foi removida intencionalmente.
 
         usuarioRepository.save(usuario);
         return getDadosUsuario(usuario);

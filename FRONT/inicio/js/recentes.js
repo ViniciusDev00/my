@@ -11,19 +11,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // Armazena todos os produtos buscados para referência rápida
     let allProducts = [];
 
-    // Funções utilitárias (podem ser movidas para um arquivo utils.js se preferir)
+    // Funções utilitárias
     const formatPrice = (price) => {
         if (typeof price !== 'number') return 'R$ --,--';
         return `R$ ${price.toFixed(2).replace('.', ',')}`;
     }
 
     const getImageUrl = (path) => {
-        if (!path) return 'FRONT/assets/images/placeholder-product.jpg'; // Usar um placeholder
+        if (!path) return 'FRONT/assets/images/placeholder-product.jpg';
         if (path.startsWith('http')) return path;
         return `http://localhost:8080/${path}`;
     };
 
-    // Renderiza os cards de produto em um container específico
+    // Renderiza os cards de produto
     const renderProductRow = (productsToRender, containerId) => {
         const container = document.getElementById(containerId);
         if (!container) {
@@ -31,7 +31,6 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // Gera HTML apenas se houver produtos
         if (productsToRender && productsToRender.length > 0) {
             container.innerHTML = productsToRender.map(product => `
                 <div class="swiper-slide">
@@ -55,47 +54,48 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
             `).join("");
         } else {
-            // Mensagem se não houver produtos para a categoria
             container.innerHTML = `<div class="swiper-slide"><p style="padding: 20px; text-align: center; color: var(--text-secondary);">Nenhum produto encontrado nesta categoria.</p></div>`;
         }
     };
 
-    // Inicializa o Swiper para um container específico
+    // Inicializa o Swiper (CORRIGIDO)
     const initSwiper = (containerClass, navPrevClass, navNextClass) => {
         const swiperEl = document.querySelector(containerClass);
-        // Só inicializa se o elemento existir E não tiver sido inicializado antes
         if (!swiperEl || swiperEl.swiper) return;
 
         try {
             new Swiper(containerClass, {
-                slidesPerView: "auto", // A configuração 'auto' original
-                spaceBetween: 24, // Espaçamento entre slides
-                freeMode: false, // Desliza livremente, sem travar em posições fixas
+                slidesPerView: "auto", // Respeita a largura definida no CSS
+                spaceBetween: 24, 
+                freeMode: true, // IMPORTANTE: Permite rolagem livre sem travar (snap suave)
+                grabCursor: true,
                 scrollbar: {
-                    el: `${containerClass} .swiper-scrollbar`, // Elemento da barra de scroll
-                    draggable: true, // Permite arrastar a barra
+                    el: `${containerClass} .swiper-scrollbar`, 
+                    draggable: true, 
                 },
                 navigation: {
-                    nextEl: navNextClass, // Seletor botão "próximo"
-                    prevEl: navPrevClass, // Seletor botão "anterior"
+                    nextEl: navNextClass, 
+                    prevEl: navPrevClass, 
                 },
-                breakpoints: { // Ajustes para diferentes tamanhos de tela
-                    // === MODIFICAÇÃO PARA MOSTRAR 2.2 PRODUTOS NO MOBILE ===
-                    320: { // Para a maioria dos celulares (larguras >= 320px)
-                        slidesPerView: 2.2,
-                        spaceBetween: 16, // Reduz o espaço para caber melhor
+                breakpoints: { 
+                    // Mobile: CORRIGIDO para "auto"
+                    320: { 
+                        slidesPerView: "auto", 
+                        spaceBetween: 16, 
                     },
-                    // =======================================================
-                    640: { // Tablets
-                        slidesPerView: 2,
+                    // Tablets
+                    640: { 
+                        slidesPerView: "auto", // Mantém auto para fluidez
                         spaceBetween: 20,
                     },
-                    1024: { // Desktops menores
-                        slidesPerView: 3,
+                    // Desktops menores
+                    1024: { 
+                        slidesPerView: "auto",
                         spaceBetween: 30,
                     },
-                     1440: { // Desktops maiores
-                        slidesPerView: 4, // Exibe mais slides em telas grandes
+                    // Desktops maiores
+                     1440: { 
+                        slidesPerView: "auto", 
                         spaceBetween: 30,
                     }
                 }
@@ -105,25 +105,19 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // Adiciona os event listeners aos botões "Adicionar ao Carrinho"
+    // Listeners dos botões
     const addCartButtonListeners = () => {
-        // Seleciona todos os botões que ainda não tiveram listener adicionado
         document.querySelectorAll('.product-card .add-to-cart-btn:not([data-listener-added="true"])').forEach(button => {
             button.addEventListener('click', (e) => {
-                e.preventDefault(); // Impede o link da imagem/nome de ser seguido
-                e.stopPropagation(); // Impede que o clique "borbulhe" para o link do card
+                e.preventDefault(); 
+                e.stopPropagation(); 
 
                 const productId = e.currentTarget.dataset.productId;
 
-                // *** CHAMA A FUNÇÃO GLOBAL DO QUICK VIEW ***
-                // Verifica se a função existe (foi criada em main.js)
                 if (window.quickViewApp && typeof window.quickViewApp.openQuickView === 'function') {
                     window.quickViewApp.openQuickView(productId);
                 } else {
-                    console.error('Erro: QuickViewApp não está definido ou a função openQuickView não existe.');
-                    // Fallback: Adiciona direto ao carrinho ou mostra erro
-                    // alert('Erro ao abrir a visualização rápida do produto.');
-                     // Fallback (adicionar direto ao carrinho como antes, se necessário)
+                    console.error('Erro: QuickViewApp não está definido.');
                     const product = allProducts.find(p => p.id == productId);
                     if(product && window.addToCart) {
                          window.addToCart({
@@ -131,7 +125,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             name: product.nome,
                             price: product.preco,
                             image: getImageUrl(product.imagemUrl),
-                            size: 'Único', // Ou um tamanho padrão
+                            size: 'Único',
                             quantity: 1
                         });
                         alert(`${product.nome} adicionado ao carrinho (tamanho padrão).`);
@@ -140,18 +134,15 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 }
             });
-            // Marca o botão para não adicionar o listener novamente
             button.dataset.listenerAdded = 'true';
         });
     };
 
-    // Função principal: busca produtos e monta as seções
+    // Busca principal
     const fetchAndDistributeProducts = async () => {
-        // Adiciona skeletons enquanto carrega
         sectionsToBuild.forEach(section => {
              const container = document.getElementById(section.containerId);
              if (container) {
-                 // Gera HTML de Skeletons (4 por seção, por exemplo)
                  container.innerHTML = Array(4).fill(0).map(() => `
                     <div class="swiper-slide skeleton-card">
                          <div class="product-image-wrapper skeleton skeleton-image" style="height: 260px;"></div>
@@ -165,24 +156,20 @@ document.addEventListener("DOMContentLoaded", () => {
              }
         });
 
-
         try {
             const response = await axios.get(API_URL);
-            allProducts = response.data; // Guarda todos os produtos
+            allProducts = response.data; 
 
-            // Renderiza cada seção com os produtos filtrados
             sectionsToBuild.forEach((section) => {
                 const filteredProducts = allProducts.filter(p => p.categoria?.nome === section.categoryName);
                 renderProductRow(filteredProducts, section.containerId);
                 initSwiper(section.swiperClass, section.prev, section.next);
             });
 
-            // Adiciona listeners aos botões DEPOIS que todos os produtos foram renderizados
             addCartButtonListeners();
 
         } catch (error) {
             console.error("Falha ao carregar produtos:", error);
-            // Mostra mensagem de erro em todas as seções
             sectionsToBuild.forEach(section => {
                  const container = document.getElementById(section.containerId);
                  if (container) {
@@ -192,6 +179,5 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // Inicia o processo
     fetchAndDistributeProducts();
 });
