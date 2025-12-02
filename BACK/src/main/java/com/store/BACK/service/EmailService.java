@@ -36,10 +36,11 @@ public class EmailService {
     private final String COLOR_INFO = "#3498db"; // Cor para Pedido Enviado
 
     // ENDEREÇOS PADRONIZADOS
+    // Usamos estes para os emails transacionais que o cliente reportou que funcionam
     private static final String REMETENTE_TRANSACIONAL = "nao-responda@japauniverse.com.br";
+    // Usamos este para o reset de senha (o endereço autenticado)
     private static final String REMETENTE_AUTENTICADO = "japauniversestore@gmail.com";
 
-    // MANTIDO: Método de conveniência que dispara a CONFIRMAÇÃO DE PEDIDO
     public void enviarConfirmacaoPagamento(Pedido pedido) {
         enviarPedidoRecebido(pedido);
     }
@@ -161,12 +162,6 @@ public class EmailService {
                             "<a href='http://localhost:5500/FRONT/perfil/HTML/pedidos.html' style='display: inline-block; background: linear-gradient(135deg, " + COLOR_PRIMARY + ", " + COLOR_PRIMARY_LIGHT + "); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(255, 122, 0, 0.3); transition: all 0.3s ease;'>Acompanhar Pedido (Em Preparação)</a>" +
                             "</div>" +
 
-                            "<div style='text-align: center; margin-top: 30px; padding: 20px; border: 1px solid " + COLOR_BORDER + "; border-radius: 8px; background-color: #f0f8ff;'>" +
-                            "<p style='color: " + COLOR_TEXT + "; font-size: 15px; margin: 0; font-weight: 500;'>" +
-                            "Receberá atualizações sobre o seu pedido tanto por e-mail quanto na aba <span style='font-weight: 700; color: " + COLOR_PRIMARY + ";'>'Avisos'</span> dentro da sua página de pedidos na loja. Obrigado por comprar na Japa Universe!" +
-                            "</p>" +
-                            "</div>" +
-
                             buildSuporteFooter();
 
 
@@ -191,7 +186,7 @@ public class EmailService {
     }
 
 
-    // MÉTODO 3: PEDIDO ENVIADO (CORRIGIDO E COMPLETADO)
+    // MÉTODO 3: PEDIDO ENVIADO (CÓDIGO QUE JÁ FUNCIONAVA + DESIGN ATUALIZADO)
     @Async
     @Transactional
     public void enviarPedidoEnviado(Pedido pedido) {
@@ -204,7 +199,7 @@ public class EmailService {
             String itensHtml = buildItensHtml(pedido);
             String enderecoHtml = buildEnderecoHtml(pedido);
 
-            // Link de rastreio
+            // Link de rastreio (com design profissional)
             String rastreioHtml = "";
             if (pedido.getCodigoRastreio() != null && !pedido.getCodigoRastreio().isEmpty()) {
                 rastreioHtml = "<div style='background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(0, 0, 0, 0)); border: 1px solid " + COLOR_INFO + "; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: center;'>" +
@@ -216,6 +211,7 @@ public class EmailService {
 
             String bodyContent =
                     "<div style='text-align: center; margin-bottom: 30px;'>" +
+                            // Ícone: Usar a cor INFO (azul)
                             "<div style='background-color: " + COLOR_INFO + "; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 15px;'>" +
                             "<span style='color: white; font-size: 24px;'>🚚</span>" +
                             "</div>" +
@@ -259,7 +255,7 @@ public class EmailService {
             helper.setText(finalHtml, true);
 
             try {
-                // PADRONIZADO: Transacional
+                // PADRONIZADO: Transacional - usa o mesmo endereço que os outros métodos
                 helper.setFrom(REMETENTE_TRANSACIONAL, "Japa Universe");
             } catch (UnsupportedEncodingException e) {
                 helper.setFrom(REMETENTE_TRANSACIONAL);
@@ -273,8 +269,63 @@ public class EmailService {
         }
     }
 
+    // --- REDEFINIÇÃO DE SENHA (DESIGN PROFISSIONAL RESTAURADO) ---
+    @Async
+    public void sendPasswordResetEmail(String to, String token) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-    // --- MÉTODOS AUXILIARES: HTML ---
+            String url = "http://127.0.0.1:5500/FRONT/login/HTML/nova-senha.html?token=" + token;
+
+            // Design profissional, igual aos outros e-mails
+            String bodyContent =
+                    "<div style='text-align: center; margin-bottom: 30px;'>" +
+                            "<div style='background-color: " + COLOR_PRIMARY + "; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 15px;'>" +
+                            "<span style='color: white; font-size: 24px;'>🔒</span>" +
+                            "</div>" +
+                            "<h1 style='color: " + COLOR_TEXT + "; margin: 0 0 10px 0; font-size: 28px;'>Redefinir Senha</h1>" +
+                            "<p style='color: " + COLOR_TEXT_LIGHT + "; margin: 0; font-size: 16px; line-height: 1.5;'>Recebemos uma solicitação para redefinir a senha da sua conta.</p>" +
+                            "</div>" +
+
+                            "<div style='background-color: " + COLOR_BG + "; padding: 20px; border-radius: 12px; margin: 25px 0; text-align: center;'>" +
+                            "<p style='color: " + COLOR_TEXT + "; margin: 0 0 15px 0;'>Clique no botão abaixo para criar uma nova senha:</p>" +
+                            "<a href='" + url + "' style='display: inline-block; background: linear-gradient(135deg, " + COLOR_PRIMARY + ", " + COLOR_PRIMARY_LIGHT + "); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(255, 122, 0, 0.3); transition: all 0.3s ease;'>Redefinir Minha Senha</a>" +
+                            "</div>" +
+
+                            "<div style='background-color: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; padding: 15px; margin: 20px 0;'>" +
+                            "<p style='color: #c53030; margin: 0; font-size: 14px; display: flex; align-items: flex-start; gap: 8px;'>" +
+                            "<span style='font-size: 16px;'>⚠️</span>" +
+                            "<span><strong>Importante:</strong> Se não foi você que solicitou esta redefinição, ignore este e-mail. O link expira em 1 hora.</span>" +
+                            "</p>" +
+                            "</div>" +
+
+                            "<div style='text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid " + COLOR_BORDER + ";'>" +
+                            "<p style='color: " + COLOR_TEXT_LIGHT + "; font-size: 13px; margin: 5px 0;'>Caso o botão não funcione, copie e cole este link no seu navegador:</p>" +
+                            "<p style='background-color: " + COLOR_BG + "; padding: 10px; border-radius: 6px; word-break: break-all; font-size: 12px; color: " + COLOR_TEXT + "; margin: 10px 0;'>" + url + "</p>" +
+                            "</div>";
+
+            String finalHtml = getBaseTemplate(bodyContent, "Redefinição de Senha");
+
+            helper.setTo(to);
+            helper.setSubject("🔐 Redefinição de Senha - Japa Universe");
+            helper.setText(finalHtml, true);
+
+            try {
+                // Mantendo o remetente autenticado para resets (que você já disse que funcionava bem)
+                helper.setFrom(REMETENTE_AUTENTICADO, "Japa Universe");
+            } catch (UnsupportedEncodingException e) {
+                helper.setFrom(REMETENTE_AUTENTICADO);
+            }
+
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Falha ao enviar e-mail de redefinição", e);
+        }
+    }
+
+    // --- MÉTODOS AUXILIARES: HTML (Mantidos) ---
 
     private String buildItensHtml(Pedido pedido) {
         StringBuilder itensHtml = new StringBuilder();
@@ -284,12 +335,13 @@ public class EmailService {
                 .append("<th align='left' style='padding: 12px; font-weight: 600;'>Produto</th>")
                 .append("<th align='center' style='padding: 12px; font-weight: 600;'>Qtd</th>")
                 .append("<th align='right' style='padding: 12px; font-weight: 600;'>Valor</th>")
-                .append("</tr>") // <<< ERRO DE SINTAXE CORRIGIDO AQUI
+                .append("</tr>")
                 .append("</thead>")
                 .append("<tbody>");
 
         for (ItemPedido item : pedido.getItens()) {
             String precoItem = String.format("%.2f", item.getPrecoUnitario());
+            // Usar multiply() para BigDecimal
             BigDecimal totalItemValue = item.getPrecoUnitario().multiply(BigDecimal.valueOf(item.getQuantidade()));
             String totalItem = String.format("%.2f", totalItemValue);
 
@@ -332,61 +384,6 @@ public class EmailService {
                 "</div>";
     }
 
-    // O método sendPasswordResetEmail original foi mantido
-    @Async
-    public void sendPasswordResetEmail(String to, String token) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            String url = "http://127.0.0.1:5500/FRONT/login/HTML/nova-senha.html?token=" + token;
-
-            String bodyContent =
-                    "<div style='text-align: center; margin-bottom: 30px;'>" +
-                            "<div style='background: linear-gradient(135deg, " + COLOR_PRIMARY + ", " + COLOR_PRIMARY_LIGHT + "); width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 15px;'>" +
-                            "<span style='color: white; font-size: 24px;'>🔒</span>" +
-                            "</div>" +
-                            "<h1 style='color: " + COLOR_TEXT + "; margin: 0 0 10px 0; font-size: 28px;'>Redefinir Senha</h1>" +
-                            "<p style='color: " + COLOR_TEXT_LIGHT + "; margin: 0; font-size: 16px; line-height: 1.5;'>Recebemos uma solicitação para redefinir a senha da sua conta.</p>" +
-                            "</div>" +
-
-                            "<div style='background-color: " + COLOR_BG + "; padding: 20px; border-radius: 12px; margin: 25px 0; text-align: center;'>" +
-                            "<p style='color: " + COLOR_TEXT + "; margin: 0 0 15px 0;'>Clique no botão abaixo para criar uma nova senha:</p>" +
-                            "<a href='" + url + "' style='display: inline-block; background: linear-gradient(135deg, " + COLOR_PRIMARY + ", " + COLOR_PRIMARY_LIGHT + "); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(255, 122, 0, 0.3); transition: all 0.3s ease;'>Redefinir Minha Senha</a>" +
-                            "</div>" +
-
-                            "<div style='background-color: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; padding: 15px; margin: 20px 0;'>" +
-                            "<p style='color: #c53030; margin: 0; font-size: 14px; display: flex; align-items: flex-start; gap: 8px;'>" +
-                            "<span style='font-size: 16px;'>⚠️</span>" +
-                            "<span><strong>Importante:</strong> Se não foi você que solicitou esta redefinição, ignore este e-mail. O link expira em 1 hora.</span>" +
-                            "</p>" +
-                            "</div>" +
-
-                            "<div style='text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid " + COLOR_BORDER + ";'>" +
-                            "<p style='color: " + COLOR_TEXT_LIGHT + "; font-size: 13px; margin: 5px 0;'>Caso o botão não funcione, copie e cole este link no seu navegador:</p>" +
-                            "<p style='background-color: " + COLOR_BG + "; padding: 10px; border-radius: 6px; word-break: break-all; font-size: 12px; color: " + COLOR_TEXT + "; margin: 10px 0;'>" + url + "</p>" +
-                            "</div>";
-
-            String finalHtml = getBaseTemplate(bodyContent, "Redefinição de Senha");
-
-            helper.setTo(to);
-            helper.setSubject("🔐 Redefinição de Senha - Japa Universe");
-            helper.setText(finalHtml, true);
-
-            try {
-                helper.setFrom(REMETENTE_AUTENTICADO, "Japa Universe");
-            } catch (UnsupportedEncodingException e) {
-                helper.setFrom(REMETENTE_AUTENTICADO);
-            }
-
-            mailSender.send(message);
-        } catch (MessagingException e) {
-            throw new RuntimeException("Falha ao enviar e-mail de redefinição", e);
-        }
-    }
-
-
-    // --- TEMPLATE BASE PROFISSIONAL (Mantido) ---
     private String getBaseTemplate(String content, String pageTitle) {
         return "<!DOCTYPE html>" +
                 "<html lang='pt-BR'>" +
