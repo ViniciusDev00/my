@@ -1,4 +1,3 @@
-// Local: BACK/src/main/java/com/store/BACK/service/UsuarioService.java
 package com.store.BACK.service;
 
 import com.store.BACK.dto.UsuarioDTO;
@@ -40,9 +39,7 @@ public class UsuarioService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário logado não encontrado no banco de dados."));
     }
 
-    // CORREÇÃO: Implementando getDadosUsuario(Usuario)
     public UsuarioDTO getDadosUsuario(Usuario usuarioLogado) {
-        // Busca o usuário novamente para garantir que Enderecos (LAZY) sejam carregados se necessário
         Usuario usuario = usuarioRepository.findById(usuarioLogado.getId())
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado com ID: " + usuarioLogado.getId()));
 
@@ -50,12 +47,42 @@ public class UsuarioService implements UserDetailsService {
         dto.setId(usuario.getId());
         dto.setNome(usuario.getNome());
         dto.setEmail(usuario.getEmail());
+        dto.setCpf(usuario.getCpf());
+        dto.setTelefone(usuario.getTelefone());
         dto.setRole(usuario.getRole());
         dto.setEnderecos(usuario.getEnderecos());
         dto.setPedidos(null);
 
         return dto;
     }
+
+    // --- MÉTODO ATUALIZAR DADOS (SEM E-MAIL) ---
+    public UsuarioDTO atualizarDados(Usuario usuarioLogado, UsuarioDTO dados) {
+        Usuario usuario = usuarioRepository.findById(usuarioLogado.getId())
+                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado."));
+
+        // Atualiza Nome
+        if (dados.getNome() != null && !dados.getNome().isBlank()) {
+            usuario.setNome(dados.getNome());
+        }
+
+        // Atualiza CPF
+        if (dados.getCpf() != null) {
+            usuario.setCpf(dados.getCpf());
+        }
+
+        // Atualiza Telefone
+        if (dados.getTelefone() != null) {
+            usuario.setTelefone(dados.getTelefone());
+        }
+
+        // REMOVIDA A LÓGICA DE ATUALIZAÇÃO DE E-MAIL
+        // O e-mail permanece o mesmo que já estava no banco.
+
+        usuarioRepository.save(usuario);
+        return getDadosUsuario(usuario);
+    }
+    // -------------------------------------------
 
     public void createPasswordResetToken(String email) {
         Usuario usuario = usuarioRepository.findByEmail(email)

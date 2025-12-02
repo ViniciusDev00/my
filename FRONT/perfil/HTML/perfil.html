@@ -23,9 +23,7 @@
         <aside class="perfil-sidebar">
             <nav class="perfil-nav">
                 <a href="./perfil.html" class="active">Meus Dados</a> 
-                
                 <a href="./pedidos.html">Meus Pedidos</a> 
-                
                 <a href="../../../index.html" id="sidebar-logout">Sair</a>
             </nav>
         </aside>
@@ -33,14 +31,32 @@
         <section class="perfil-content">
             <div class="perfil-section">
                 <h2 class="perfil-section-title">Meus Dados</h2>
-                <div id="user-info-container">
+                <form id="form-meus-dados">
+                    <div class="user-data-card">
+                        <div class="data-group">
+                            <label for="user-nome">Nome Completo</label>
+                            <input type="text" id="user-nome" placeholder="Seu nome" required>
+                        </div>
+
+                        <div class="data-group">
+                            <label for="user-cpf">CPF</label>
+                            <input type="text" id="user-cpf" placeholder="000.000.000-00">
+                        </div>
+                        <div class="data-group">
+                            <label for="user-telefone">Telefone</label>
+                            <input type="text" id="user-telefone" placeholder="(00) 00000-0000">
+                        </div>
                     </div>
+                    <div style="text-align: right; margin-top: 15px;">
+                        <button type="submit" class="btn btn-primary" id="btn-salvar-dados">Salvar Alterações</button>
+                    </div>
+                </form>
             </div>
 
             <div class="perfil-section">
                  <div class="content-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: var(--space-md);">
                     <h2 class="perfil-section-title" style="border: none; margin: 0; padding: 0;">Meus Endereços</h2>
-                    <button class="btn btn-primary">Adicionar novo endereço</button>
+                    <button class="btn btn-primary" id="btn-novo-endereco-trigger">Adicionar novo endereço</button>
                 </div>
                 <div id="addresses-container">
                     </div>
@@ -53,6 +69,7 @@
             </div>
         </section>
     </main>
+
     <div class="modal-overlay" id="address-modal-overlay"></div>
     <div class="modal" id="address-modal">
         <div class="modal-header">

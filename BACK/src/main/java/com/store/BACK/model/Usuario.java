@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.ToString; // NOVO IMPORT
+import lombok.ToString;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -26,12 +26,11 @@ public class Usuario implements UserDetails {
     private Long id;
     private String nome;
     private String cpf;
+    private String telefone; // CAMPO NOVO
     private String email;
     private String senha;
     private String role;
 
-    // CORREÇÃO CRÍTICA: O @ToString.Exclude impede que o filtro de segurança chame
-    // a coleção Lazy (enderecos) e cause a LazyInitializationException (o erro 401/403).
     @ToString.Exclude
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Endereco> enderecos;

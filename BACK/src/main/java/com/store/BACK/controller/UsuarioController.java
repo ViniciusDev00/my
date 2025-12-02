@@ -8,9 +8,7 @@ import com.store.BACK.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*; // Importante: garante que PutMapping e RequestBody funcionem
 
 import java.util.List;
 
@@ -26,10 +24,17 @@ public class UsuarioController {
 
     @GetMapping("/meus-dados")
     public ResponseEntity<UsuarioDTO> getMeusDados(@AuthenticationPrincipal Usuario usuarioLogado) {
-        // CORREÇÃO: Chamada que funcionará com o método corrigido no UsuarioService
         UsuarioDTO usuarioDTO = usuarioService.getDadosUsuario(usuarioLogado);
         return ResponseEntity.ok(usuarioDTO);
     }
+
+    // --- CORREÇÃO: ADICIONADO O MÉTODO PUT PARA RESOLVER O ERRO 405 ---
+    @PutMapping("/meus-dados")
+    public ResponseEntity<UsuarioDTO> updateMeusDados(@AuthenticationPrincipal Usuario usuarioLogado, @RequestBody UsuarioDTO dadosAtualizados) {
+        UsuarioDTO novoUsuario = usuarioService.atualizarDados(usuarioLogado, dadosAtualizados);
+        return ResponseEntity.ok(novoUsuario);
+    }
+    // ------------------------------------------------------------------
 
     @GetMapping("/meus-pedidos")
     public ResponseEntity<List<Pedido>> getMeusPedidos(@AuthenticationPrincipal Usuario usuarioLogado) {

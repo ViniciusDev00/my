@@ -13,10 +13,10 @@ public class UsuarioDTO {
     private Long id;
     private String nome;
     private String email;
+    private String cpf;      // CAMPO NOVO
+    private String telefone; // CAMPO NOVO
     private String role;
 
-    // --- CORREÇÃO APLICADA AQUI ---
-    // Adicionamos os campos que faltavam para endereços e pedidos.
     private List<Endereco> enderecos;
     private List<Pedido> pedidos;
 }

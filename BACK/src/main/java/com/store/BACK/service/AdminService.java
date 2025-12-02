@@ -52,6 +52,10 @@ public class AdminService {
 
         // 2. Lógica para o status ENVIADO (Gera o link automaticamente)
         final String STATUS_ENVIADO = "ENVIADO";
+        final String STATUS_ENTREGUE = "ENTREGUE";
+        final String STATUS_CANCELADO = "CANCELADO";
+        final String STATUS_PAGO = "PAGO";
+
         if (STATUS_ENVIADO.equalsIgnoreCase(novoStatus) && !STATUS_ENVIADO.equalsIgnoreCase(statusAntigo)) {
             if (codigoRastreio == null || codigoRastreio.trim().isEmpty()) {
                 throw new IllegalArgumentException("Código de rastreio é obrigatório para o status ENVIADO.");
@@ -60,8 +64,7 @@ public class AdminService {
             // Concatena o link fixo com o código
             pedido.setLinkRastreio(CORREIOS_LINK_BASE + codigoRastreio);
         } else if (!STATUS_ENVIADO.equalsIgnoreCase(novoStatus)) {
-            pedido.setCodigoRastreio(null);
-            pedido.setLinkRastreio(null);
+            // Se mudar para outro status, mantemos o rastreio no histórico, sem limpar
         }
 
         // 3. Atualiza o status
@@ -69,43 +72,45 @@ public class AdminService {
         Pedido pedidoSalvo = pedidoRepository.save(pedido);
 
         // 4. ENVIOS DE E-MAIL
-        final String STATUS_PAGO = "PAGO";
-
-        // E-mail de Pagamento Confirmado
-        if (STATUS_PAGO.equalsIgnoreCase(novoStatus) && !STATUS_PAGO.equalsIgnoreCase(statusAntigo)) {
-            try {
-                // Inicializa dados para evitar erro no Async
-                pedidoSalvo.getItens().size();
+        try {
+            // --- CORREÇÃO CRÍTICA: INICIALIZAÇÃO DE DADOS PARA TODOS OS STATUS ---
+            // Acessamos explicitamente os dados LAZY para garantir o carregamento
+            if (!novoStatus.equalsIgnoreCase(statusAntigo)) {
                 pedidoSalvo.getUsuario().getEmail();
-                emailService.enviarPagamentoConfirmado(pedidoSalvo);
-            } catch (Exception e) {
-                e.printStackTrace();
+                pedidoSalvo.getUsuario().getNome();
+                pedidoSalvo.getItens().size();
+                pedidoSalvo.getEnderecoDeEntrega().getCep();
             }
-        }
 
-        // E-mail de Pedido Enviado
-        if (STATUS_ENVIADO.equalsIgnoreCase(novoStatus) && !STATUS_ENVIADO.equalsIgnoreCase(statusAntigo)) {
-            try {
-                System.out.println(">>> [ADMIN] Status ENVIADO detectado. Preparando dados para e-mail...");
+            // E-mail de Pagamento Confirmado
+            if (STATUS_PAGO.equalsIgnoreCase(novoStatus) && !STATUS_PAGO.equalsIgnoreCase(statusAntigo)) {
+                System.out.println(">>> [ADMIN] Enviando e-mail de PAGAMENTO CONFIRMADO...");
+                emailService.enviarPagamentoConfirmado(pedidoSalvo);
+            }
 
-                // --- CORREÇÃO CRÍTICA: INICIALIZAÇÃO DE DADOS ---
-                // Acessamos explicitamente os dados LAZY (usuário, itens, endereço)
-                // para garantir que o Hibernate os busque antes de passar para a thread de e-mail.
-                String email = pedidoSalvo.getUsuario().getEmail();
-                String nome = pedidoSalvo.getUsuario().getNome();
-                int itens = pedidoSalvo.getItens().size();
-                String rua = pedidoSalvo.getEnderecoDeEntrega().getRua();
-
-                System.out.println(">>> [ADMIN] Dados carregados com sucesso: " + email);
-
+            // E-mail de Pedido Enviado
+            else if (STATUS_ENVIADO.equalsIgnoreCase(novoStatus) && !STATUS_ENVIADO.equalsIgnoreCase(statusAntigo)) {
+                System.out.println(">>> [ADMIN] Enviando e-mail de PEDIDO ENVIADO...");
                 if (pedidoSalvo.getCodigoRastreio() != null) {
                     emailService.enviarPedidoEnviado(pedidoSalvo);
-                    System.out.println(">>> [ADMIN] E-mail de rastreio disparado.");
                 }
-            } catch (Exception e) {
-                System.err.println("!!! [ADMIN] Erro ao preparar e-mail de envio: " + e.getMessage());
-                e.printStackTrace();
             }
+
+            // E-mail de Pedido Entregue (NOVO)
+            else if (STATUS_ENTREGUE.equalsIgnoreCase(novoStatus) && !STATUS_ENTREGUE.equalsIgnoreCase(statusAntigo)) {
+                System.out.println(">>> [ADMIN] Enviando e-mail de PEDIDO ENTREGUE...");
+                emailService.enviarPedidoEntregue(pedidoSalvo);
+            }
+
+            // E-mail de Pedido Cancelado (NOVO)
+            else if (STATUS_CANCELADO.equalsIgnoreCase(novoStatus) && !STATUS_CANCELADO.equalsIgnoreCase(statusAntigo)) {
+                System.out.println(">>> [ADMIN] Enviando e-mail de PEDIDO CANCELADO...");
+                emailService.enviarPedidoCancelado(pedidoSalvo);
+            }
+
+        } catch (Exception e) {
+            System.err.println("!!! [ADMIN] Erro ao tentar enviar e-mail: " + e.getMessage());
+            e.printStackTrace();
         }
 
         return pedidoSalvo;

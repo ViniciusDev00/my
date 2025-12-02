@@ -11,5 +11,4 @@ public class        JapaunderApplication {
     public static void main(String[] args) {
         SpringApplication.run(JapaunderApplication.class, args);
     }
-
 }
