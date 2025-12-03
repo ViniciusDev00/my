@@ -337,6 +337,55 @@
   left: 100%;
 }
 
+/* ===================================================
+    CORREÇÕES ESPECÍFICAS PARA TÍTULOS MOBILE
+   =================================================== */
+@media (max-width: 768px) {
+  .section-titleRECEM {
+    font-size: 2.2rem !important;
+    text-align: left !important;
+    margin-bottom: var(--space-sm) !important;
+    background: linear-gradient(45deg, var(--text-primary), var(--primary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    width: 100%;
+    font-weight: 900;
+  }
+
+  .section-titleRECEM::after {
+    left: 0 !important;
+    transform: translateX(0) !important;
+    width: 60px;
+  }
+
+  /* Ajuste para os títulos das seções de coleção */
+  .collection-section .section-header {
+    position: relative;
+    padding-bottom: 60px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--space-md);
+  }
+
+  .collection-section .section-header > div:first-child {
+    flex: 1;
+  }
+
+  .collection-section .section-header h2.section-title {
+    font-size: 1.8rem;
+    margin-top: 4px;
+  }
+
+  /* Reposiciona os botões de navegação */
+  .collection-section .collection-nav {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+  }
+}
+
 /* ===================================
     RESPONSIVIDADE PREMIUM
    =================================== */
@@ -349,24 +398,31 @@
   
   .collection-section .section-header {
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     gap: var(--space-lg);
-    text-align: center;
+    text-align: left;
     padding: 0 var(--space-md);
     margin-bottom: var(--space-xl);
+    position: relative;
   }
 
   .section-titleRECEM {
     font-size: clamp(2.5rem, 10vw, 4rem);
     margin-bottom: var(--space-md);
+    text-align: left;
   }
 
   .section-titleRECEM::after {
     width: 80px;
+    left: 0;
+    transform: translateX(0);
   }
 
   .collection-nav {
     margin-top: var(--space-md);
+    position: absolute;
+    bottom: 0;
+    right: var(--space-md);
   }
 
   .collection-nav button,
@@ -382,7 +438,7 @@
   }
 
   .swiper[class*="collection-swiper"] .swiper-slide {
-    /* width: 280px !important; */
+    width: 280px !important;
   }
 
   .product-card:hover {
@@ -390,35 +446,35 @@
   }
 
   .product-image-wrapper {
-    height: 160px; /* Reduz a altura da imagem */
+    height: 220px;
     padding: var(--space-sm);
   }
 
   .product-info {
-    padding: var(--space-sm); /* Reduz o padding interno */
+    padding: var(--space-md);
     gap: var(--space-xs);
   }
 
   .product-name {
-    font-size: 0.9rem; /* Reduz o tamanho da fonte do nome */
+    font-size: 1rem;
     -webkit-line-clamp: 2;
   }
 
   .product-price {
-    font-size: 1.1rem; /* Reduz o tamanho da fonte do preço */
+    font-size: 1.3rem;
   }
 
   .add-to-cart-btn {
-    padding: 0.6rem 1rem; /* Diminui o botão */
-    font-size: 0.75rem;
-    margin-top: var(--space-xs);
+    padding: 0.8rem 1.5rem;
+    font-size: 0.85rem;
+    margin-top: var(--space-sm);
   }
 }
 
 /* Mobile Small (até 480px) */
 @media (max-width: 480px) {
   .swiper[class*="collection-swiper"] .swiper-slide {
-    /* width: 260px !important; */
+    width: 260px !important;
   }
 
   .product-image-wrapper {
@@ -444,6 +500,11 @@
 
   .product-price {
     font-size: 1.2rem;
+  }
+
+  .add-to-cart-btn {
+    padding: 0.7rem 1.2rem;
+    font-size: 0.8rem;
   }
 }
 
