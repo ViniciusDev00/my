@@ -17,14 +17,14 @@
   border-radius: 16px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
   overflow: hidden;
-  display: flex; /* Garante que o contêiner do slide ocupe todo o espaço */
+  display: flex;
 }
 
 /* Imagens dentro do Carrossel */
 .featured-sneaker-img {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* Faz a imagem cobrir todo o slide sem distorcer */
+  object-fit: cover;
 }
 
 /* Estilos para a Navegação do Carrossel (Setas) */
@@ -73,139 +73,8 @@
   opacity: 1;
 }
 
-/* ===== COLLECTION SECTION ("Recém-Chegados") ===== */
-
-.collection-section {
-  background-color: var(--surface);
-  padding-top: var(--space-xxl);
-  padding-bottom: var(--space-xxl);
-}
-
-.collection-section .section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: var(--space-xl);
-}
-
-.collection-nav button {
-  width: 50px;
-  height: 50px;
-  border: 1px solid var(--border-color);
-  border-radius: 50%;
-  color: var(--text-secondary);
-  font-size: 1.1rem;
-  transition: all var(--transition-fast);
-}
-
-.collection-nav button:hover {
-  background-color: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-}
-
-.collection-nav button.swiper-button-disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.collection-nav {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-.collection-swiper {
-  width: 100%;
-  padding-left: calc((100% - 1300px) / 2 + 1.5rem);
-  padding-right: calc((100% - 1300px) / 2 + 1.5rem);
-  padding-bottom: var(--space-xl);
-}
-
-/* Redefine o width do swiper-slide para a coleção, para não conflitar */
-.collection-swiper .swiper-slide {
-  width: 320px !important;
-}
-
-.product-card {
-  background-color: transparent;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  overflow: hidden;
-  transition: transform var(--transition-normal),
-    box-shadow var(--transition-normal);
-}
-
-.product-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  border-color: var(--primary);
-}
-
-.product-image-wrapper {
-  height: 350px;
-  background-color: var(--background);
-  padding: var(--space-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.product-image-wrapper img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform var(--transition-normal);
-}
-
-.product-card:hover .product-image-wrapper img {
-  transform: scale(1.08) rotate(-3deg);
-}
-
-.product-info {
-  padding: var(--space-md);
-  background-color: var(--surface);
-}
-
-.product-brand {
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
-.product-name {
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 1.2rem;
-  letter-spacing: 0;
-  color: var(--text-primary);
-  margin: var(--space-xs) 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.product-price {
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--primary);
-}
-
-.swiper-scrollbar {
-  background: var(--surface);
-  height: 4px !important;
-}
-
-.swiper-scrollbar-drag {
-  background: var(--primary);
-}
-
-.text-center {
-  text-align: center;
-  margin-top: var(--space-lg);
-}
-
 /* ===================================
-    RESPONSIVIDADE - FEATURED SNEAKER
+    APENAS MOBILE - DESKTOP INTACTO
    =================================== */
 
 @media (max-width: 768px) {
@@ -215,31 +84,48 @@
   }
 
   .featured-image-wrapper.swiper {
-    height: 400px;
+    height: 300px;
     border-radius: 12px;
+    order: -1;
   }
 
   .featured-image-wrapper .swiper-button-next,
   .featured-image-wrapper .swiper-button-prev {
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
   }
 
-  .product-image-wrapper {
-    height: 280px;
+  .featured-image-wrapper .swiper-button-next::after,
+  .featured-image-wrapper .swiper-button-prev::after {
+    font-size: 1rem;
   }
 }
 
 @media (max-width: 480px) {
   .featured-image-wrapper.swiper {
-    height: 350px;
+    height: 250px;
   }
 
   .featured-image-wrapper .swiper-pagination {
     bottom: 10px !important;
   }
 
-  .product-image-wrapper {
-    height: 220px;
+  .featured-image-wrapper .swiper-pagination-bullet {
+    width: 8px;
+    height: 8px;
+  }
+}
+
+/* Tablet - mantém desktop */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .featured-image-wrapper.swiper {
+    height: 400px;
+  }
+}
+
+/* Desktop grande - exatamente como estava */
+@media (min-width: 1440px) {
+  .featured-image-wrapper.swiper {
+    height: 500px;
   }
 }
