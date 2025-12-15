@@ -24,10 +24,25 @@ public class Produto {
     @Column(nullable = false)
     private BigDecimal preco;
 
-    // NOVO CAMPO ADICIONADO AQUI
     private BigDecimal precoOriginal;
 
-    private String imagemUrl;
+    // --- NOVO: Agrupamento de Cores ---
+    // Produtos com o mesmo código (ex: "NIKE_TN") serão tratados como variações
+    @Column(name = "codigo_modelo")
+    private String codigoModelo; 
+
+    // --- IMAGENS ---
+    private String imagemUrl;  // Foto Principal (Capa)
+
+    @Column(name = "imagem_url_2")
+    private String imagemUrl2; // Foto Lateral
+
+    @Column(name = "imagem_url_3")
+    private String imagemUrl3; // Foto Traseira/Sola
+
+    @Column(name = "imagem_url_4")
+    private String imagemUrl4; // Foto Detalhe/Pé
+    // ----------------
 
     @Column(nullable = false)
     private int estoque;

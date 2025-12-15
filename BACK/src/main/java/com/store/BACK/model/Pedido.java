@@ -32,6 +32,10 @@ public class Pedido {
     @Column(columnDefinition = "TEXT")
     private String pixCopiaECola;
 
+    // NOVO CAMPO: ID do pagamento no Mercado Pago
+    @Column(name = "pagamento_id_externo")
+    private Long pagamentoIdExterno;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "endereco_id", nullable = false)
     private Endereco enderecoDeEntrega;
@@ -65,7 +69,7 @@ public class Pedido {
     @JsonManagedReference("pedido-itens")
     private List<ItemPedido> itens;
 
-    // Getters e Setters (todos os existentes + os novos)
+    // Getters e Setters
 
     public Long getId() {
         return id;
@@ -113,6 +117,14 @@ public class Pedido {
 
     public void setPixCopiaECola(String pixCopiaECola) {
         this.pixCopiaECola = pixCopiaECola;
+    }
+
+    public Long getPagamentoIdExterno() {
+        return pagamentoIdExterno;
+    }
+
+    public void setPagamentoIdExterno(Long pagamentoIdExterno) {
+        this.pagamentoIdExterno = pagamentoIdExterno;
     }
 
     public Endereco getEnderecoDeEntrega() {
@@ -179,7 +191,6 @@ public class Pedido {
         this.entregaPrioritaria = entregaPrioritaria;
     }
 
-    // NOVOS GETTERS/SETTERS DE RASTREIO
     public String getCodigoRastreio() {
         return codigoRastreio;
     }

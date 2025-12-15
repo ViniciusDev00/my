@@ -1,47 +1,74 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finalizar Pagamento | Japa Universe</title>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <title>Pagamento - Japa Universe</title>
+    
     <link rel="stylesheet" href="../../assets/CSS/base.css">
     <link rel="stylesheet" href="../CSS/pagamento.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 </head>
 <body>
 
-    <header class="main-header" data-basepath="../.."></header>
+    <header class="simple-header">
+        <a href="../../index.html" class="logo">Japa<span> Universe</span></a>
+    </header>
 
-    <main class="container">
-        <div class="pix-container">
-            <h1>Quase lá!</h1>
-            <p class="pix-instructions">
-                Pedido <strong id="pedido-id">#...</strong> | Valor: <strong id="pedido-valor">R$ ...</strong>
-            </p>
-            <p class="pix-instructions">
-                Escaneie o QR Code abaixo com o app do seu banco ou use o Pix Copia e Cola.
-            </p>
-
-            <div id="pix-details" class="pix-details-content">
-                <div class="spinner-container">
-                    <div class="spinner"></div>
-                    <p>Gerando código de pagamento...</p>
-                </div>
+    <main class="payment-container">
+        
+        <div id="payment-pending" class="payment-box">
+            <div class="timer">
+                <i class="far fa-clock"></i> Aguardando pagamento...
             </div>
 
-            <p class="waiting-payment">Aguardando confirmação do pagamento...</p>
-            <p class="pix-info">
-                Assim que o pagamento for identificado (o que pode levar alguns minutos), 
-                o status do seu pedido será atualizado. Você receberá um e-mail de confirmação.
-            </p>
-            <a href="../../perfil/HTML/pedidos.html" class="btn btn-outline">Ver Meus Pedidos</a>
+            <h2>Pagamento via PIX</h2>
+            <p>Escaneie o QR Code abaixo ou copie o código.</p>
+
+            <div class="qr-wrapper">
+                <canvas id="qr-code-canvas"></canvas>
+            </div>
+
+            <div class="copy-paste-section">
+                <label>Pix Copia e Cola:</label>
+                <div class="input-group">
+                    <input type="text" id="pix-code-input" readonly>
+                    <button id="btn-copy" onclick="copiarCodigo()">
+                        <i class="far fa-copy"></i> Copiar
+                    </button>
+                </div>
+                <span id="copy-msg" class="fade-msg">Copiado!</span>
+            </div>
+
+            <div class="total-display">
+                Total: <span id="valor-total">R$ 0,00</span>
+            </div>
+
+            <div class="instructions">
+                <p>1. Abra o app do seu banco.</p>
+                <p>2. Escolha Pix > Pagar com QR Code ou Copia e Cola.</p>
+                <p>3. Após pagar, <strong>aguarde nesta tela</strong> pela confirmação automática.</p>
+            </div>
+            
+            <a href="../../perfil/HTML/pedidos.html" class="btn-secondary">Ver Meus Pedidos</a>
         </div>
+
+        <div id="payment-success" class="payment-box hidden">
+            <div class="success-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h2>Pagamento Aprovado!</h2>
+            <p>Recebemos seu pagamento. Seu pedido está sendo preparado.</p>
+            <p>Você receberá um e-mail com os detalhes.</p>
+            
+            <a href="../../perfil/HTML/pedidos.html" class="btn-primary">Acompanhar Pedido</a>
+        </div>
+
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrious/dist/qrious.min.js"></script>
-    <script src="../../assets/js/header.js"></script>
     <script src="../js/pagamento.js"></script>
 </body>
 </html>

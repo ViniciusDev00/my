@@ -1,162 +1,117 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Pega os elementos da página
-    const pixDetailsContainer = document.getElementById('pix-details');
-    const pedidoIdEl = document.getElementById('pedido-id');
-    const pedidoValorEl = document.getElementById('pedido-valor');
-    
+    const params = new URLSearchParams(window.location.search);
+    const pedidoId = params.get('id');
     const token = localStorage.getItem('jwtToken');
+
+    const qrCanvas = document.getElementById('qr-code-canvas');
+    const pixInput = document.getElementById('pix-code-input');
+    const valorTotalEl = document.getElementById('valor-total');
+    
+    // Elementos das telas
+    const pendingBox = document.getElementById('payment-pending');
+    const successBox = document.getElementById('payment-success');
+
+    // URL da API (Ajusta automaticamente localhost ou produção)
+    const BASE_URL = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
+        ? 'http://localhost:8080/api'
+        : 'https://japa-backend-production.up.railway.app/api';
+
     if (!token) {
-        // Redireciona para login se não estiver logado
-        window.location.href = '../../login/HTML/login.html'; 
+        window.location.href = '../../login/HTML/login.html';
         return;
     }
 
-    // Cliente Axios (usando a URL hardcoded do checkout, deve ser mudada em prod)
+    if (!pedidoId) {
+        alert('Pedido não encontrado.');
+        window.location.href = '../../index.html';
+        return;
+    }
+
+    // Configuração do Axios
     const apiClient = axios.create({
-        baseURL: 'http://localhost:8080/api', 
+        baseURL: BASE_URL,
         headers: { 'Authorization': `Bearer ${token}` }
     });
-    
-    // Pega o ID do pedido da URL (link do email)
-    const urlParams = new URLSearchParams(window.location.search);
-    const idFromUrl = urlParams.get('id');
 
-    // Pega dados do SessionStorage (para o fluxo IMEDIATO após o checkout)
-    const sessionId = sessionStorage.getItem('ultimoPedidoId');
-    const sessionValor = sessionStorage.getItem('ultimoPedidoValor');
-    const sessionPixCode = sessionStorage.getItem('ultimoPedidoPixCode');
-    
-    // --- FUNÇÕES DE AUXÍLIO ---
-
-    const handleError = (message) => {
-        pixDetailsContainer.innerHTML = `<p style="color: red; font-weight: bold; padding: 20px 0;">${message}</p>`;
-        if(pedidoIdEl) pedidoIdEl.textContent = '#ERRO';
-        if(pedidoValorEl) pedidoValorEl.textContent = 'R$ --,--';
-        console.error("Erro no processamento do pedido.");
-    };
-
-    const renderPixDetails = (id, valor, pix) => {
-        if (!id || !valor || !pix) {
-             return handleError("Erro: Dados críticos do pedido não encontrados.");
-        }
-        
-        // 2. Atualiza as informações na tela
+    // 1. Carrega os dados do pedido ao abrir a tela
+    async function carregarPedido() {
         try {
-            if(pedidoIdEl) pedidoIdEl.textContent = `#${String(id).padStart(6, '0')}`;
-            if(pedidoValorEl) pedidoValorEl.textContent = `R$ ${parseFloat(valor).toFixed(2).replace('.', ',')}`;
-        } catch(e) {
-            console.error("Erro ao formatar dados do pedido: ", e);
-        }
-
-        // 3. Insere o HTML do QR Code e do Copia/Cola
-        pixDetailsContainer.innerHTML = `
-            <canvas id="qr-code-canvas" class="qr-code-canvas"></canvas>
-            
-            <div class="copia-cola-container">
-                <p>Se preferir, copie o código Pix:</p>
-                <input type="text" id="pix-copia-cola-input" class="copia-cola-text" value="${pix}" readonly>
-                <button class="btn btn-primary copy-btn" id="copy-btn">
-                    <i class="fas fa-copy"></i> Copiar Código
-                </button>
-            </div>
-        `;
-
-        // 4. Gera o QR Code
-        try {
-            const qrCanvas = document.getElementById('qr-code-canvas');
-            // Nota: Assume que a biblioteca QRious está carregada globalmente.
-            if (qrCanvas && typeof QRious !== 'undefined') {
-                new QRious({
-                    element: qrCanvas,
-                    value: pix,
-                    size: 250, 
-                    level: 'H'
-                });
-            } else {
-                 console.error("Elemento canvas ou biblioteca QRious não encontrada.");
-                 if(qrCanvas) qrCanvas.outerHTML = '<p style="color: red;">Erro ao gerar QR Code (Verifique a lib QRious).</p>';
-            }
-        } catch (e) {
-            console.error("Erro ao instanciar QRious: ", e);
-            handleError('Erro fatal ao gerar QR Code.');
-        }
-
-        // 5. Adiciona funcionalidade ao botão "Copiar"
-        const copyBtn = document.getElementById('copy-btn');
-        const pixInput = document.getElementById('pix-copia-cola-input');
-        
-        if (copyBtn && pixInput) {
-            copyBtn.addEventListener('click', () => {
-                pixInput.select();
-                pixInput.setSelectionRange(0, 99999); 
-                navigator.clipboard.writeText(pix).then(() => {
-                    // Sucesso!
-                    copyBtn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
-                    copyBtn.style.backgroundColor = '#28a745'; 
-                    copyBtn.style.borderColor = '#28a745';
-                    setTimeout(() => {
-                        copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copiar Código';
-                        copyBtn.style.backgroundColor = ''; 
-                        copyBtn.style.borderColor = '';
-                    }, 2500);
-                }).catch(err => {
-                    console.error('Falha ao copiar (navigator.clipboard): ', err);
-                    showCopyError();
-                });
-            });
-            
-            function showCopyError() {
-                copyBtn.innerHTML = '<i class="fas fa-times"></i> Falhou!';
-                copyBtn.style.backgroundColor = '#dc3545'; 
-                copyBtn.style.borderColor = '#dc3545';
-                 setTimeout(() => {
-                    copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copiar Código';
-                    copyBtn.style.backgroundColor = '';
-                    copyBtn.style.borderColor = '';
-                }, 2500);
-            }
-        }
-    };
-    
-    const loadDataFromApi = async (id, client) => {
-        try {
-            // A API de pedidos deve ter segurança para garantir que apenas o dono acesse.
-            const res = await client.get(`/pedidos/${id}`);
+            const res = await apiClient.get(`/pedidos/${pedidoId}`);
             const pedido = res.data;
 
-            if (pedido && pedido.pixCopiaECola && pedido.valorTotal) {
-                // A API retorna o objeto Pedido completo
-                return {
-                    id: pedido.id,
-                    valorTotal: pedido.valorTotal,
-                    pixCopiaECola: pedido.pixCopiaECola
-                };
-            } else {
-                 throw new Error("Pedido encontrado, mas sem código PIX ou valor. Status: " + pedido.status);
+            // Se já estiver pago, mostra sucesso direto
+            if (pedido.status === 'PAGO' || pedido.status === 'ENVIADO' || pedido.status === 'ENTREGUE') {
+                mostrarSucesso();
+                return;
             }
-        } catch (err) {
-            console.error('Erro ao buscar pedido da API:', err.response || err);
-            // Lança uma exceção para o bloco .catch abaixo tratar.
-            throw new Error(err.response?.data?.message || 'Falha ao carregar pedido do servidor.');
+
+            // Preenche valores na tela
+            valorTotalEl.textContent = `R$ ${pedido.valorTotal.toFixed(2).replace('.', ',')}`;
+            
+            // Se tiver o código Pix, desenha
+            if (pedido.pixCopiaECola) {
+                renderizarQRCode(pedido.pixCopiaECola);
+                pixInput.value = pedido.pixCopiaECola;
+            }
+
+            // Inicia a verificação automática (Polling)
+            iniciarMonitoramento();
+
+        } catch (error) {
+            console.error('Erro ao carregar pedido:', error);
+            alert('Erro ao carregar detalhes do pagamento.');
         }
-    };
-    
-    // --- LÓGICA PRINCIPAL ---
-    
-    if (idFromUrl) {
-        // Cenário 1: Vindo de um link de e-mail ou URL (URL tem o ID)
-        loadDataFromApi(idFromUrl, apiClient).then(data => {
-            renderPixDetails(data.id, data.valorTotal, data.pixCopiaECola);
-        }).catch(error => {
-            handleError(error.message);
-        });
-        
-    } else if (sessionId && sessionPixCode && sessionValor) {
-        // Cenário 2: Vindo imediatamente do Checkout (SessionStorage tem os dados)
-        renderPixDetails(sessionId, sessionValor, sessionPixCode);
-        
-    } else {
-        // Cenário 3: Erro (sem SessionStorage e sem ID na URL)
-        handleError("Erro: Não foi possível identificar o pedido para pagamento. Faça o checkout novamente.");
     }
+
+    // 2. Desenha o QR Code usando a biblioteca QRious
+    function renderizarQRCode(textoPix) {
+        new QRious({
+            element: qrCanvas,
+            value: textoPix,
+            size: 200,
+            level: 'H' // Alta correção de erro
+        });
+    }
+
+    // 3. Função do botão Copiar
+    window.copiarCodigo = function() {
+        pixInput.select();
+        pixInput.setSelectionRange(0, 99999); // Mobile
+        navigator.clipboard.writeText(pixInput.value).then(() => {
+            const msg = document.getElementById('copy-msg');
+            msg.style.opacity = '1';
+            setTimeout(() => msg.style.opacity = '0', 2000);
+        });
+    }
+
+    // 4. Polling: Verifica o status a cada 5 segundos
+    let intervalId = null;
+    function iniciarMonitoramento() {
+        // Verifica a cada 5 segundos
+        intervalId = setInterval(async () => {
+            try {
+                const res = await apiClient.get(`/pedidos/${pedidoId}`);
+                const status = res.data.status;
+                console.log('Verificando status...', status);
+
+                if (status === 'PAGO' || status === 'ENVIADO') {
+                    mostrarSucesso();
+                    clearInterval(intervalId); // Para de verificar
+                }
+            } catch (error) {
+                console.error('Erro no monitoramento:', error);
+            }
+        }, 5000);
+    }
+
+    function mostrarSucesso() {
+        pendingBox.classList.add('hidden');
+        successBox.classList.remove('hidden');
+        
+        // Toca um som ou vibra (opcional para mobile)
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    }
+
+    // Iniciar
+    carregarPedido();
 });

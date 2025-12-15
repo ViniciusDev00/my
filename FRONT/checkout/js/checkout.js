@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // CAMPOS DE DADOS
     const addressSelectionContainer = document.getElementById('address-selection');
     const nomeEl = document.getElementById('nomeCompleto');
-    const cpfEl = document.getElementById('cpfDestinatario'); // NOVO ELEMENTO
+    const cpfEl = document.getElementById('cpfDestinatario');
     const emailEl = document.getElementById('email');
     const telefoneEl = document.getElementById('telefone');
     const confirmTelEl = document.getElementById('confirmacaoTelefone');
@@ -36,13 +36,18 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedAddressId = null;
     let currentSubtotal = 0;
 
+    // URL BASE INTELIGENTE
+    const BASE_URL = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
+        ? 'http://localhost:8080/api'
+        : 'https://japa-backend-production.up.railway.app/api';
+
     if (!token) {
         window.location.href = '../../login/HTML/login.html';
         return;
     }
 
     const apiClient = axios.create({
-        baseURL: 'http://localhost:8080/api',
+        baseURL: BASE_URL,
         headers: { 'Authorization': `Bearer ${token}` }
     });
 
@@ -116,9 +121,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await apiClient.get('/usuario/meus-dados');
             const addresses = res.data.enderecos || [];
             
-            // PREENCHE DADOS PESSOAIS
             if (res.data.nome) nomeEl.value = res.data.nome;
-            if (res.data.cpf) cpfEl.value = res.data.cpf; // PREENCHE CPF
+            if (res.data.cpf) cpfEl.value = res.data.cpf;
             if (res.data.email) emailEl.value = res.data.email;
             if (res.data.telefone) telefoneEl.value = res.data.telefone;
 
@@ -153,11 +157,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (!selectedAddressId) return alert('Selecione um endereço.');
         if (telefoneEl.value !== confirmTelEl.value) return alert('Os telefones não conferem.');
-        if (!cpfEl.value) return alert('Por favor, preencha o CPF.'); // VALIDAÇÃO CPF
+        if (!cpfEl.value) return alert('Por favor, preencha o CPF.');
         
         if (!confirmaEnderecoCheckbox.checked) {
-            alert('Por favor, marque a caixa confirmando que o endereço está correto.');
-            confirmaEnderecoCheckbox.focus();
+            alert('Por favor, confirme se o endereço está correto.');
             return;
         }
 
@@ -166,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
             itens: cart.map(i => ({ produtoId: i.id, quantidade: i.quantity, tamanho: i.size })),
             enderecoEntregaId: parseInt(selectedAddressId),
             nomeDestinatario: nomeEl.value,
-            cpfDestinatario: cpfEl.value, // ENVIA CPF DIGITADO
+            cpfDestinatario: cpfEl.value,
             telefoneDestinatario: telefoneEl.value,
             observacoes: obsEl.value,
             comCaixa: document.querySelector('input[name="opcaoCaixa"]:checked')?.value === 'true',
@@ -180,14 +183,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const res = await apiClient.post('/pedidos', checkoutData);
             
+            // Sucesso! Limpa carrinho
             localStorage.removeItem('japaUniverseCart');
             if(window.updateCartCounter) window.updateCartCounter();
 
+            // Salva dados temporários (backup)
             sessionStorage.setItem('ultimoPedidoId', res.data.id);
-            sessionStorage.setItem('ultimoPedidoValor', res.data.valorTotal);
-            sessionStorage.setItem('ultimoPedidoPixCode', res.data.pixCopiaECola);
 
-            // CORREÇÃO: Adiciona o ID do pedido à URL
+            // Redireciona para o pagamento com o ID na URL
             window.location.href = `../../pagamento/HTML/pagamento.html?id=${res.data.id}`;
 
         } catch (error) {

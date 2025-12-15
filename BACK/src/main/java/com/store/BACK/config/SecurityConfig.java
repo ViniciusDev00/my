@@ -33,8 +33,8 @@ public class SecurityConfig {
                 .cors(withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(a -> a
-                        // CORREÇÃO: Adicionado "/error" para evitar 403 em caso de 404 (arquivo não encontrado)
-                        .requestMatchers("/api/auth/**", "/api/public/**", "/api/produtos/**", "/uploads/**", "/FRONT/**", "/error").permitAll()
+                        // Adicionado "/api/webhook/**" para permitir notificações do Mercado Pago sem login
+                        .requestMatchers("/api/auth/**", "/api/public/**", "/api/produtos/**", "/uploads/**", "/FRONT/**", "/error", "/api/webhook/**").permitAll()
 
                         // Rotas de Usuário (requerem ROLE_USER ou ROLE_ADMIN)
                         .requestMatchers("/api/usuario/meus-dados").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
